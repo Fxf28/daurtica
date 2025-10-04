@@ -23,6 +23,7 @@ export function Navbar() {
   const navItems = [
     { name: "Beranda", href: "/" },
     { name: "Klasifikasi", href: "/classify" },
+    { name: "Edukasi", href: "/education" },
     { name: "Tentang Kami", href: "/about" },
   ]
 
@@ -72,7 +73,7 @@ export function Navbar() {
             </SignUpButton>
           </SignedOut>
           <SignedIn>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </SignedIn>
         </div>
 
@@ -184,7 +185,7 @@ export function Navbar() {
                   </SignUpButton>
                 </SignedOut>
                 <SignedIn>
-                  <UserButton afterSignOutUrl="/" />
+                  <UserButton />
                 </SignedIn>
               </motion.div>
             </motion.div>
