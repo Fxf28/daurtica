@@ -6,7 +6,6 @@ import { UploadImage } from "@/components/upload-image";
 import { CameraCapture } from "@/components/camera-capture";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
-import { Footer } from "@/components/footer";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -83,7 +82,7 @@ export default function ClassifyPage() {
                 </AlertDialog>
             </main>
 
-            <Footer />
+
         </div>
     );
 }

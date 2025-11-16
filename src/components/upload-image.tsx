@@ -34,7 +34,7 @@ export const UploadImage = () => {
         reader.readAsDataURL(file);
 
         try {
-            await classifyImage(file, "upload", true);
+            await classifyImage(file);
         } catch (err) {
             console.error(err);
             toast.error("Gagal mengklasifikasi gambar");
@@ -73,12 +73,13 @@ export const UploadImage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="mt-10 w-full max-w-lg rounded-xl border p-6 shadow-sm bg-card"
+                    className="mt-10 w-full max-w-lg rounded-xl border p-6 shadow-sm bg-card relative"
                 >
                     <div className="flex flex-col items-center">
                         {imageLoading && (
                             <Skeleton className="w-full max-w-md h-64 rounded-lg mb-4" />
                         )}
+
                         <Image
                             src={selectedImage}
                             alt="Preview sampah"
@@ -89,13 +90,16 @@ export const UploadImage = () => {
                             onLoadingComplete={() => setImageLoading(false)}
                         />
 
+                        {/* --- NEW: overlay ketika loading model --- */}
+                        {loading && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center rounded-xl">
+                                <LoadingSpinner size="lg" />
+                                <p className="text-white mt-2">Menganalisis gambar...</p>
+                            </div>
+                        )}
+
                         {/* Result */}
                         <div className="mt-6 w-full">
-                            {loading && (
-                                <div className="flex justify-center">
-                                    <LoadingSpinner size="lg" />
-                                </div>
-                            )}
                             {!loading && results.length > 0 && (
                                 <ClassificationCard results={results} />
                             )}

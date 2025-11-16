@@ -41,7 +41,7 @@ export const CameraCapture: React.FC = () => {
         const response = await fetch(imageSrc);
         const blob = await response.blob();
 
-        await classifyImage(blob, "camera", true);
+        await classifyImage(blob);
     }, [classifyImage]);
 
     const retake = () => {
@@ -110,15 +110,11 @@ export const CameraCapture: React.FC = () => {
                                 </div>
                             </motion.div>
                         ) : (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.3 }}
-                                className="text-center"
-                            >
+                            <motion.div className="relative text-center">
                                 {imageLoading && (
                                     <Skeleton className="w-full max-w-md h-64 mx-auto rounded-lg mb-4" />
                                 )}
+
                                 <Image
                                     src={capturedImage}
                                     alt="Captured"
@@ -126,16 +122,28 @@ export const CameraCapture: React.FC = () => {
                                     height={400}
                                     className={`w-full max-w-md mx-auto rounded-lg mb-4 transition-opacity duration-500 ${imageLoading ? "opacity-0" : "opacity-100"
                                         }`}
-                                    onLoadingComplete={() => setImageLoading(false)}
+                                    onLoad={() => setImageLoading(false)}
                                 />
-                                <Button
-                                    onClick={retake}
-                                    variant="secondary"
-                                    className="flex items-center space-x-2"
-                                >
-                                    <RefreshCcw className="h-4 w-4" />
-                                    <span>Ambil Ulang</span>
-                                </Button>
+
+                                {/* overlay loading model */}
+                                {loading && (
+                                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg">
+                                        <LoadingSpinner size="lg" />
+                                        <p className="text-white mt-2">Menganalisis gambar...</p>
+                                    </div>
+                                )}
+
+                                {/* RETAKE button */}
+                                {!loading && (
+                                    <Button
+                                        onClick={retake}
+                                        variant="secondary"
+                                        className="flex items-center space-x-2 mx-auto mt-2"
+                                    >
+                                        <RefreshCcw className="h-4 w-4" />
+                                        <span>Ambil Ulang</span>
+                                    </Button>
+                                )}
                             </motion.div>
                         )}
 

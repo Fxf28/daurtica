@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { Footer } from "@/components/footer";
 
 export default function AboutPage() {
     return (
@@ -81,8 +80,6 @@ export default function AboutPage() {
                     </p>
                 </motion.div>
             </main>
-
-            <Footer />
         </div>
     );
 }

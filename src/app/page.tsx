@@ -3,7 +3,6 @@
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
-import { Footer } from "@/components/footer"
 import { Camera, BookOpen, Leaf } from "lucide-react"
 
 export default function Home() {
@@ -90,8 +89,7 @@ export default function Home() {
         ))}
       </section>
 
-      {/* Footer */}
-      <Footer />
+
     </main>
   )
 }
