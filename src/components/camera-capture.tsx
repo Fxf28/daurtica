@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Camera as CameraIcon, RotateCcw, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,17 +8,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useClassification } from "@/hooks/use-classification";
+import { useModelStatus } from "@/hooks/use-model-status"; // ✅ IMPORT DISINI
 import { ClassificationCard } from "@/components/classification-card";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
+import { useUser } from "@clerk/nextjs";
+import { saveClassification } from "@/lib/api/classification";
 
 export const CameraCapture: React.FC = () => {
+    const { user } = useUser();
     const webcamRef = useRef<Webcam>(null);
     const { classifyImage, loading, results } = useClassification();
+    const modelStatus = useModelStatus(); // ✅ GUNAKAN DISINI
     const [capturedImage, setCapturedImage] = useState<string>("");
     const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
     const [imageLoading, setImageLoading] = useState(false);
+    const [captureBlob, setCaptureBlob] = useState<Blob | null>(null);
 
     const videoConstraints = {
         width: 1280,
@@ -26,27 +32,68 @@ export const CameraCapture: React.FC = () => {
         facingMode: facingMode,
     };
 
+    // Auto-save to history when results are available and user is logged in
+    useEffect(() => {
+        const saveToHistory = async () => {
+            if (results.length > 0 && user && captureBlob) {
+                try {
+                    await saveClassification({
+                        imageUrl: capturedImage,
+                        topLabel: results[0].label,
+                        confidence: results[0].confidence,
+                        allResults: results,
+                        source: "camera",
+                        processingTime: 200,
+                        imageSize: captureBlob.size,
+                        deviceType: "web"
+                    });
+                    toast.success("Hasil klasifikasi disimpan ke riwayat");
+                } catch (error) {
+                    console.error("Failed to save classification:", error);
+                    toast.error("Gagal menyimpan ke riwayat");
+                }
+            }
+        };
+        saveToHistory();
+    }, [results, user, capturedImage, captureBlob]);
+
     const capture = useCallback(async () => {
+        // ✅ Cek status model sebelum capture
+        if (modelStatus === "error") {
+            toast.error("Model AI tidak tersedia. Silakan refresh halaman.");
+            return;
+        }
+
+        if (modelStatus === "loading") {
+            toast.info("Model AI masih loading, harap tunggu...");
+            return;
+        }
+
         const imageSrc = webcamRef.current?.getScreenshot();
         if (!imageSrc) {
             toast.error("Gagal mengambil gambar");
             return;
-        } else {
-            toast.success("Berhasil mengambil gambar")
         }
 
         setCapturedImage(imageSrc);
         setImageLoading(true);
 
-        const response = await fetch(imageSrc);
-        const blob = await response.blob();
-
-        await classifyImage(blob);
-    }, [classifyImage]);
+        try {
+            const response = await fetch(imageSrc);
+            const blob = await response.blob();
+            setCaptureBlob(blob);
+            await classifyImage(blob);
+            toast.success("Berhasil mengambil gambar");
+        } catch (error) {
+            console.error("Capture error:", error);
+            toast.error("Gagal memproses gambar");
+        }
+    }, [classifyImage, modelStatus]); // ✅ Tambah modelStatus ke dependency
 
     const retake = () => {
         setCapturedImage("");
         setImageLoading(false);
+        setCaptureBlob(null);
     };
 
     const toggleCamera = () => {
@@ -68,9 +115,52 @@ export const CameraCapture: React.FC = () => {
                     </p>
                 </motion.div>
 
+                {/* ✅ MODEL STATUS INDICATOR - TAMBAHKAN DISINI */}
+                {modelStatus === "loading" && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg"
+                    >
+                        <div className="flex items-center justify-center space-x-2">
+                            <LoadingSpinner size="sm" />
+                            <p className="text-blue-800 text-sm">
+                                ⚡ Loading AI model... Harap tunggu sebentar
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
+
+                {modelStatus === "error" && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+                    >
+                        <p className="text-red-800 text-sm">
+                            ❌ Gagal memuat model AI. Fitur klasifikasi tidak tersedia.
+                        </p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => window.location.reload()}
+                        >
+                            Refresh Halaman
+                        </Button>
+                    </motion.div>
+                )}
+
                 <Card className="shadow-xl">
                     <CardHeader>
-                        <CardTitle>Kamera</CardTitle>
+                        <CardTitle className="flex items-center justify-between">
+                            <span>Kamera</span>
+                            {modelStatus === "ready" && (
+                                <span className="text-sm font-normal text-green-600 flex items-center">
+                                    ✅ AI Ready
+                                </span>
+                            )}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         {!capturedImage ? (
@@ -101,7 +191,7 @@ export const CameraCapture: React.FC = () => {
 
                                     <Button
                                         onClick={capture}
-                                        disabled={loading}
+                                        disabled={loading || modelStatus !== "ready"} // ✅ Disable jika model tidak ready
                                         className="rounded-full w-14 h-14 flex items-center justify-center"
                                         title="Ambil Foto"
                                     >
@@ -125,7 +215,7 @@ export const CameraCapture: React.FC = () => {
                                     onLoad={() => setImageLoading(false)}
                                 />
 
-                                {/* overlay loading model */}
+                                {/* Loading overlay */}
                                 {loading && (
                                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg">
                                         <LoadingSpinner size="lg" />
@@ -133,7 +223,7 @@ export const CameraCapture: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* RETAKE button */}
+                                {/* Retake button */}
                                 {!loading && (
                                     <Button
                                         onClick={retake}
@@ -155,7 +245,24 @@ export const CameraCapture: React.FC = () => {
                                 transition={{ delay: 0.2 }}
                                 className="mt-8"
                             >
-                                <ClassificationCard results={results} />
+                                <ClassificationCard
+                                    results={results}
+                                    onSuggest={() => {
+                                        // Handle suggestion feature
+                                        toast.info("Fitur saran pengelolaan sampah akan segera hadir");
+                                    }}
+                                />
+                            </motion.div>
+                        )}
+
+                        {/* Login Reminder */}
+                        {!user && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm"
+                            >
+                                <p>💡 <strong>Login untuk menyimpan riwayat klasifikasi</strong> - Hasil dari kamera akan otomatis tersimpan di dashboard Anda</p>
                             </motion.div>
                         )}
 

@@ -13,21 +13,106 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import { ModeToggle } from "./mode-toggle"
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner" // atau bisa menggunakan alert biasa
 
 export function Navbar() {
   const pathname = usePathname()
   const [open, setOpen] = React.useState(false)
+  const { user } = useUser()
 
   const navItems = [
     { name: "Beranda", href: "/" },
     { name: "Klasifikasi", href: "/classify" },
     { name: "Edukasi", href: "/education" },
     { name: "Tentang Kami", href: "/about" },
+    { name: "Dashboard", href: "/dashboard", requiresAuth: true }
   ]
 
   const handleClose = () => setOpen(false)
+
+  const handleDashboardClick = (e: React.MouseEvent, requiresAuth?: boolean) => {
+    if (requiresAuth && !user) {
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Tampilkan toast/alert
+      toast.error("Silakan login terlebih dahulu untuk mengakses Dashboard")
+
+      // Atau bisa menggunakan alert biasa:
+      // alert("Silakan login terlebih dahulu untuk mengakses Dashboard")
+    }
+  }
+
+  const renderNavItem = (item: typeof navItems[0]) => {
+    if (item.requiresAuth && !user) {
+      return (
+        <NavigationMenuItem key={item.href}>
+          <NavigationMenuLink
+            className={`${navigationMenuTriggerStyle()} cursor-not-allowed opacity-60`}
+            onClick={(e) => handleDashboardClick(e, true)}
+            title="Silakan login untuk mengakses Dashboard"
+          >
+            {item.name}
+          </NavigationMenuLink>
+        </NavigationMenuItem>
+      )
+    }
+
+    return (
+      <NavigationMenuItem key={item.href}>
+        <NavigationMenuLink
+          asChild
+          className={`${navigationMenuTriggerStyle()} ${pathname === item.href ? "bg-muted font-semibold" : ""}`}
+        >
+          <Link href={item.href}>{item.name}</Link>
+        </NavigationMenuLink>
+      </NavigationMenuItem>
+    )
+  }
+
+  const renderMobileNavItem = (item: typeof navItems[0]) => {
+    if (item.requiresAuth && !user) {
+      return (
+        <motion.li
+          key={item.href}
+          variants={{
+            hidden: { opacity: 0, x: 20 },
+            show: { opacity: 1, x: 0 },
+          }}
+          transition={{ duration: 0.3 }}
+        >
+          <button
+            onClick={(e) => handleDashboardClick(e, true)}
+            className={`block rounded px-2 py-2 transition w-full text-left cursor-not-allowed opacity-60 ${pathname === item.href ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
+            title="Silakan login untuk mengakses Dashboard"
+          >
+            {item.name}
+          </button>
+        </motion.li>
+      )
+    }
+
+    return (
+      <motion.li
+        key={item.href}
+        variants={{
+          hidden: { opacity: 0, x: 20 },
+          show: { opacity: 1, x: 0 },
+        }}
+        transition={{ duration: 0.3 }}
+      >
+        <Link
+          href={item.href}
+          className={`block rounded px-2 py-2 hover:bg-muted/60 transition ${pathname === item.href ? "bg-muted font-semibold" : ""}`}
+          onClick={handleClose}
+        >
+          {item.name}
+        </Link>
+      </motion.li>
+    )
+  }
 
   return (
     <nav className="w-full border-b">
@@ -40,17 +125,7 @@ export function Navbar() {
         {/* Desktop Menu */}
         <NavigationMenu className="hidden md:flex">
           <NavigationMenuList className="flex gap-4">
-            {navItems.map((item) => (
-              <NavigationMenuItem key={item.href}>
-                <NavigationMenuLink
-                  asChild
-                  className={`${navigationMenuTriggerStyle()} ${pathname === item.href ? "bg-muted font-semibold" : ""
-                    }`}
-                >
-                  <Link href={item.href}>{item.name}</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            ))}
+            {navItems.map(renderNavItem)}
           </NavigationMenuList>
         </NavigationMenu>
 
@@ -132,25 +207,7 @@ export function Navbar() {
                 }}
                 className="flex flex-col gap-2"
               >
-                {navItems.map((item) => (
-                  <motion.li
-                    key={item.href}
-                    variants={{
-                      hidden: { opacity: 0, x: 20 },
-                      show: { opacity: 1, x: 0 },
-                    }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Link
-                      href={item.href}
-                      className={`block rounded px-2 py-2 hover:bg-muted/60 transition ${pathname === item.href ? "bg-muted font-semibold" : ""
-                        }`}
-                      onClick={handleClose}
-                    >
-                      {item.name}
-                    </Link>
-                  </motion.li>
-                ))}
+                {navItems.map(renderMobileNavItem)}
               </motion.ul>
 
               {/* Divider */}
