@@ -1,7 +1,8 @@
-// app/dashboard/generate/page.tsx
+// src/app/dashboard/generate/page.tsx
 "use client";
 
 import { motion } from "framer-motion";
+import { EducationPersonalList } from "@/components/dashboard/education-personal-list";
 
 export default function GenerateEdukasiPage() {
     return (
@@ -12,15 +13,13 @@ export default function GenerateEdukasiPage() {
                 transition={{ duration: 0.4 }}
                 className="mb-8"
             >
-                <h1 className="text-3xl font-bold text-foreground mb-2">Generate Edukasi</h1>
+                <h1 className="text-3xl font-bold text-foreground mb-2">Education Personal</h1>
                 <p className="text-muted-foreground">
-                    Generate konten edukasi tentang pengelolaan sampah (Fitur dalam pengembangan)
+                    Generate dan kelola konten edukasi personal tentang pengelolaan sampah menggunakan AI
                 </p>
             </motion.div>
 
-            <div className="bg-muted/50 border rounded-lg p-8 text-center">
-                <p className="text-muted-foreground">Fitur ini akan segera hadir.</p>
-            </div>
+            <EducationPersonalList />
         </div>
     );
 }

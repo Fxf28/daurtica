@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import { Sidebar } from "@/components/dashboard-sidebar";
-import { MobileHeader } from "@/components/dashboard-mobile-header";
-import { AuthGuard } from "@/components/auth-guard";
+import { Sidebar } from "@/components/dashboard/dashboard-sidebar";
+import { MobileHeader } from "@/components/dashboard/dashboard-mobile-header";
+import { AuthGuard } from "@/components/dashboard/auth-guard";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);

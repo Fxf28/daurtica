@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { ArrowUpRight, History, TrendingUp, Package, Recycle, Camera, Upload, Sparkles, PieChart as PieChartIcon, BarChart as BarChartIcon } from "lucide-react";
-import { DashboardBarChart, DashboardPieChart } from "@/components/dashboard-charts";
+import { DashboardBarChart, DashboardPieChart } from "@/components/dashboard/dashboard-charts";
 
 export default async function DashboardPage() {
     const { userId } = await auth();

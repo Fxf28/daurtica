@@ -1,4 +1,4 @@
-import { Home, History, Camera, Upload, Sparkles, LucideIcon } from "lucide-react";
+import { Home, History, Camera, Upload, Sparkles, Book, LucideIcon } from "lucide-react";
 
 export interface MenuItem {
   href: string;
@@ -13,4 +13,5 @@ export const menuItems: MenuItem[] = [
   { href: "/dashboard/camera", icon: Camera, label: "Kamera Klasifikasi", exact: false },
   { href: "/dashboard/history", icon: History, label: "Riwayat Klasifikasi", exact: false },
   { href: "/dashboard/generate", icon: Sparkles, label: "Generate Edukasi", exact: false },
+  { href: "/dashboard/education", icon: Book, label: "Edukasi Publik", exact: false },
 ];

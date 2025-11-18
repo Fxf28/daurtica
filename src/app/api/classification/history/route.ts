@@ -5,6 +5,7 @@ import { classificationHistory } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, desc, count } from "drizzle-orm";
+import type { ClassificationHistoryDB, TransformedClassificationHistory } from "@/types/classification";
 
 // Validation schema
 const CreateClassificationSchema = z.object({
@@ -25,6 +26,30 @@ const CreateClassificationSchema = z.object({
   deviceType: z.string().optional(),
 });
 
+// Helper function untuk transform data dengan type safety
+function transformClassificationData(item: ClassificationHistoryDB): TransformedClassificationHistory {
+  // Handle allResults dengan type guard
+  const allResults = Array.isArray(item.allResults)
+    ? item.allResults.map((result: unknown) => {
+        if (result && typeof result === "object" && "label" in result && "confidence" in result) {
+          const confidenceValue = (result as { confidence: unknown }).confidence;
+          return {
+            label: String((result as { label: unknown }).label),
+            confidence: typeof confidenceValue === "string" ? parseFloat(confidenceValue) : typeof confidenceValue === "number" ? confidenceValue : 0,
+          };
+        }
+        return { label: "Unknown", confidence: 0 };
+      })
+    : [];
+
+  return {
+    ...item,
+    confidence: parseFloat(item.confidence),
+    allResults,
+  };
+}
+
+// ✅ POST - Create new classification history
 export async function POST(req: Request) {
   try {
     // --- Authentication ---
@@ -75,11 +100,15 @@ export async function POST(req: Request) {
       })
       .returning();
 
+    // --- Transform data untuk response ---
+    const dbData: ClassificationHistoryDB = result[0];
+    const responseData = transformClassificationData(dbData);
+
     // --- Success Response ---
     return NextResponse.json(
       {
         message: "Classification history saved successfully",
-        data: result[0],
+        data: responseData,
       },
       { status: 201 }
     );
@@ -103,7 +132,7 @@ export async function POST(req: Request) {
   }
 }
 
-// GET endpoint untuk mengambil history user dengan pagination yang lebih baik
+// ✅ GET - Get paginated classification history (TANPA params.id)
 export async function GET(req: Request) {
   try {
     const { userId } = await auth();
@@ -134,8 +163,11 @@ export async function GET(req: Request) {
     const total = totalResult[0]?.count || 0;
     const totalPages = Math.ceil(total / limit);
 
+    // ✅ TRANSFORM DATA: Convert confidence dari string ke number dengan type safety
+    const transformedHistory: TransformedClassificationHistory[] = history.map((item: ClassificationHistoryDB) => transformClassificationData(item));
+
     return NextResponse.json({
-      data: history,
+      data: transformedHistory,
       pagination: {
         page,
         limit,

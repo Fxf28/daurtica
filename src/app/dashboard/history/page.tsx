@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HistoryItem } from "@/components/history-item";
-import { HistoryPagination } from "@/components/history-pagination";
+import { HistoryItem } from "@/components/dashboard/history-item";
+import { HistoryPagination } from "@/components/dashboard/history-pagination";
 import { useClassificationHistoryList } from "@/hooks/use-classification-history";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { useSearchParams, useRouter } from "next/navigation";

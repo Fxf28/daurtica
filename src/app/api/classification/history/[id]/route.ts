@@ -4,19 +4,40 @@ import { db } from "@/db";
 import { classificationHistory } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
+import type { ClassificationHistoryDB, TransformedClassificationHistory } from "@/types/classification";
 
-// GET - Get single classification history by ID
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> } // params adalah Promise
-) {
+// Helper function untuk transform data dengan type safety
+function transformClassificationData(item: ClassificationHistoryDB): TransformedClassificationHistory {
+  // Handle allResults dengan type guard
+  const allResults = Array.isArray(item.allResults)
+    ? item.allResults.map((result: unknown) => {
+        if (result && typeof result === "object" && "label" in result && "confidence" in result) {
+          const confidenceValue = (result as { confidence: unknown }).confidence;
+          return {
+            label: String((result as { label: unknown }).label),
+            confidence: typeof confidenceValue === "string" ? parseFloat(confidenceValue) : typeof confidenceValue === "number" ? confidenceValue : 0,
+          };
+        }
+        return { label: "Unknown", confidence: 0 };
+      })
+    : [];
+
+  return {
+    ...item,
+    confidence: parseFloat(item.confidence),
+    allResults,
+  };
+}
+
+// ✅ GET - Get single classification history by ID
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized", message: "You must be logged in to access this resource" }, { status: 401 });
     }
 
-    const { id } = await params; // AWAIT params
+    const { id } = await params;
 
     // Validasi ID
     if (!id) {
@@ -35,9 +56,13 @@ export async function GET(
       return NextResponse.json({ error: "Not Found", message: "Classification history not found" }, { status: 404 });
     }
 
+    // ✅ TRANSFORM DATA: Convert confidence dari string ke number dengan type safety
+    const dbData: ClassificationHistoryDB = history[0];
+    const transformedData = transformClassificationData(dbData);
+
     return NextResponse.json({
       message: "Classification history retrieved successfully",
-      data: history[0],
+      data: transformedData,
     });
   } catch (error) {
     console.error("Error fetching classification history:", error);
@@ -53,18 +78,15 @@ export async function GET(
   }
 }
 
-// DELETE - Delete classification history by ID
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> } // params adalah Promise
-) {
+// ✅ DELETE - Delete classification history by ID
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized", message: "You must be logged in to delete classification history" }, { status: 401 });
     }
 
-    const { id } = await params; // AWAIT params
+    const { id } = await params;
 
     // Validasi ID
     if (!id) {
@@ -82,9 +104,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Not Found", message: "Classification history not found or you don't have permission to delete it" }, { status: 404 });
     }
 
+    // ✅ TRANSFORM DATA: Convert confidence dari string ke number untuk response dengan type safety
+    const dbData: ClassificationHistoryDB = deletedHistory[0];
+    const transformedData = transformClassificationData(dbData);
+
     return NextResponse.json({
       message: "Classification history deleted successfully",
-      data: deletedHistory[0],
+      data: transformedData,
     });
   } catch (error) {
     console.error("Error deleting classification history:", error);

@@ -1,17 +1,17 @@
 // lib/api/classification-history.ts
 import { z } from "zod";
 
-// Response schemas
+// Response schemas - PERBAIKAN: confidence sebagai number
 export const ClassificationHistorySchema = z.object({
   id: z.string(),
   userId: z.string(),
   imageUrl: z.string().nullable(),
   topLabel: z.string(),
-  confidence: z.string(),
+  confidence: z.number(), // ✅ Tetap sebagai number
   allResults: z.array(
     z.object({
       label: z.string(),
-      confidence: z.number(),
+      confidence: z.number(), // ✅ Tetap sebagai number
     })
   ),
   source: z.string(),
@@ -34,74 +34,92 @@ export const PaginatedResponseSchema = z.object({
   }),
 });
 
-// GET single classification by ID
+// PERBAIKAN: Tambah proper error handling di semua functions
 export async function getClassificationById(id: string) {
-  const response = await fetch(`/api/classification/history/${id}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  try {
+    const response = await fetch(`/api/classification/history/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const validatedResult = ClassificationHistorySchema.safeParse(result.data);
+
+    if (!validatedResult.success) {
+      console.error("Validation error:", validatedResult.error);
+      throw new Error("Invalid response data from server");
+    }
+
+    return validatedResult.data;
+  } catch (error) {
+    console.error(`Error getting classification ${id}:`, error);
+    throw error;
   }
-
-  const result = await response.json();
-  const validatedResult = ClassificationHistorySchema.safeParse(result.data);
-
-  if (!validatedResult.success) {
-    throw new Error("Invalid response data from server");
-  }
-
-  return validatedResult.data;
 }
 
-// DELETE classification by ID
+// DELETE classification by ID dengan error handling
 export async function deleteClassificationById(id: string) {
-  const response = await fetch(`/api/classification/history/${id}`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  try {
+    const response = await fetch(`/api/classification/history/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const validatedResult = ClassificationHistorySchema.safeParse(result.data);
+
+    if (!validatedResult.success) {
+      console.error("Validation error:", validatedResult.error);
+      throw new Error("Invalid response data from server");
+    }
+
+    return validatedResult.data;
+  } catch (error) {
+    console.error(`Error deleting classification ${id}:`, error);
+    throw error;
   }
-
-  const result = await response.json();
-  const validatedResult = ClassificationHistorySchema.safeParse(result.data);
-
-  if (!validatedResult.success) {
-    throw new Error("Invalid response data from server");
-  }
-
-  return validatedResult.data;
 }
 
-// GET paginated classifications
+// GET paginated classifications dengan error handling
 export async function getClassificationHistory(page: number = 1, limit: number = 12) {
-  const response = await fetch(`/api/classification/history?page=${page}&limit=${limit}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  try {
+    const response = await fetch(`/api/classification/history?page=${page}&limit=${limit}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const validatedResult = PaginatedResponseSchema.safeParse(result);
+
+    if (!validatedResult.success) {
+      console.error("Validation error:", validatedResult.error);
+      throw new Error("Invalid response data from server");
+    }
+
+    return validatedResult.data;
+  } catch (error) {
+    console.error("Error getting classification history:", error);
+    throw error;
   }
-
-  const result = await response.json();
-  const validatedResult = PaginatedResponseSchema.safeParse(result);
-
-  if (!validatedResult.success) {
-    throw new Error("Invalid response data from server");
-  }
-
-  return validatedResult.data;
 }

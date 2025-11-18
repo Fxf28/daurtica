@@ -15,6 +15,13 @@
       "when": 1763383512134,
       "tag": "0001_awesome_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763452170326,
+      "tag": "0002_complete_krista_starr",
+      "breakpoints": true
     }
   ]
 }

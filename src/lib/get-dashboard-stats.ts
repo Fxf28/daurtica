@@ -1,40 +1,49 @@
 // lib/get-dashboard-stats.ts
 import { db } from "@/db";
 import { classificationHistory } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
+// Gunakan optimized queries dengan aggregate functions
 export async function getDashboardStats(userId: string) {
-  // Query dasar dengan limit untuk menghindari memory issues
-  const baseData = await db.select().from(classificationHistory).where(eq(classificationHistory.userId, userId)).orderBy(desc(classificationHistory.createdAt)).limit(1000); // Limit untuk data yang sangat banyak
+  try {
+    // Hitung total count dengan query terpisah untuk performance
+    const totalCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(classificationHistory)
+      .where(eq(classificationHistory.userId, userId));
 
-  if (baseData.length === 0) {
+    const total = totalCountResult[0]?.count || 0;
+
+    if (total === 0) {
+      return getEmptyStats();
+    }
+
+    // Query data dasar dengan limit untuk performance
+    const baseData = await db.select().from(classificationHistory).where(eq(classificationHistory.userId, userId)).orderBy(desc(classificationHistory.createdAt)).limit(1000);
+
+    // Pisahkan calculation logic
+    const stats = calculateStatsFromData(baseData, total);
+    return stats;
+  } catch (error) {
+    console.error("Error getting dashboard stats:", error);
     return getEmptyStats();
   }
+}
 
+// Pisahkan calculation logic untuk clarity dan performance
+function calculateStatsFromData(data: (typeof classificationHistory.$inferSelect)[], total: number) {
   // Hitung statistik dasar
-  const total = baseData.length;
-
-  const byLabel = baseData.reduce<Record<string, number>>((acc, item) => {
-    acc[item.topLabel] = (acc[item.topLabel] || 0) + 1;
-    return acc;
-  }, {});
-
-  const avgConfidence = baseData.reduce<number>((sum, item) => sum + (parseFloat(item.confidence) || 0), 0) / total;
+  const byLabel = calculateByLabel(data);
+  const bySource = calculateBySource(data);
+  const avgConfidence = calculateAvgConfidence(data);
 
   // Statistik berdasarkan waktu
   const now = new Date();
   const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const recentData = baseData.filter((item) => new Date(item.createdAt) >= last7Days);
-
-  const monthlyData = baseData.filter((item) => new Date(item.createdAt) >= last30Days);
-
-  // Statistik berdasarkan source
-  const bySource = baseData.reduce<Record<string, number>>((acc, item) => {
-    acc[item.source] = (acc[item.source] || 0) + 1;
-    return acc;
-  }, {});
+  const recentData = data.filter((item) => new Date(item.createdAt) >= last7Days);
+  const monthlyData = data.filter((item) => new Date(item.createdAt) >= last30Days);
 
   // Top labels dengan detail
   const topLabels = Object.entries(byLabel)
@@ -42,26 +51,32 @@ export async function getDashboardStats(userId: string) {
       label,
       count,
       percentage: (count / total) * 100,
-      avgConfidence: baseData.filter((item) => item.topLabel === label).reduce((sum, item) => sum + parseFloat(item.confidence), 0) / count,
+      avgConfidence: data.filter((item) => item.topLabel === label).reduce((sum, item) => sum + parseFloat(item.confidence), 0) / count,
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 
   // Activity trends (7 hari terakhir)
-  const dailyActivity = getDailyActivity(baseData, last7Days);
+  const dailyActivity = getDailyActivity(data, last7Days);
 
   // Confidence distribution
-  const confidenceDistribution = getConfidenceDistribution(baseData);
+  const confidenceDistribution = getConfidenceDistribution(data);
 
   // Processing time stats (jika ada data)
-  const processingStats = getProcessingStats(baseData);
+  const processingStats = getProcessingStats(data);
+
+  // Weekly trend calculation
+  const previousPeriodStart = new Date(last7Days.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const previousPeriodData = data.filter((item) => new Date(item.createdAt) >= previousPeriodStart && new Date(item.createdAt) < last7Days);
+
+  const weeklyTrend = previousPeriodData.length > 0 ? ((recentData.length - previousPeriodData.length) / previousPeriodData.length) * 100 : recentData.length > 0 ? 100 : 0;
 
   return {
     // Basic stats
     total,
     byLabel,
     bySource,
-    avgConfidence: parseFloat(avgConfidence.toFixed(3)),
+    avgConfidence,
 
     // Time-based stats
     weeklyCount: recentData.length,
@@ -74,15 +89,34 @@ export async function getDashboardStats(userId: string) {
     processingStats,
 
     // Recent activity (max 10 items)
-    recent: baseData.slice(0, 10),
+    recent: data.slice(0, 10),
 
     // Performance metrics
-    weeklyTrend: calculateTrend(baseData, last7Days, last30Days),
-    mostActiveDay: getMostActiveDay(baseData),
+    weeklyTrend,
+    mostActiveDay: getMostActiveDay(data),
   };
 }
 
-// Helper functions
+// Helper functions dengan optimizations
+function calculateByLabel(data: (typeof classificationHistory.$inferSelect)[]) {
+  return data.reduce<Record<string, number>>((acc, item) => {
+    acc[item.topLabel] = (acc[item.topLabel] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function calculateBySource(data: (typeof classificationHistory.$inferSelect)[]) {
+  return data.reduce<Record<string, number>>((acc, item) => {
+    acc[item.source] = (acc[item.source] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function calculateAvgConfidence(data: (typeof classificationHistory.$inferSelect)[]) {
+  const sum = data.reduce((sum, item) => sum + (parseFloat(item.confidence) || 0), 0);
+  return parseFloat((sum / data.length).toFixed(3));
+}
+
 function getEmptyStats() {
   return {
     total: 0,
@@ -169,16 +203,6 @@ function getProcessingStats(data: (typeof classificationHistory.$inferSelect)[])
     maxProcessingTime: Math.max(...times),
     totalWithProcessingTime: itemsWithProcessingTime.length,
   };
-}
-
-function calculateTrend(data: (typeof classificationHistory.$inferSelect)[], recentPeriod: Date, previousPeriod: Date) {
-  const recentCount = data.filter((item) => new Date(item.createdAt) >= recentPeriod).length;
-
-  const previousCount = data.filter((item) => new Date(item.createdAt) >= previousPeriod && new Date(item.createdAt) < recentPeriod).length;
-
-  if (previousCount === 0) return recentCount > 0 ? 100 : 0;
-
-  return ((recentCount - previousCount) / previousCount) * 100;
 }
 
 function getMostActiveDay(data: (typeof classificationHistory.$inferSelect)[]) {

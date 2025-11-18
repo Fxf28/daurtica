@@ -29,7 +29,7 @@ interface HistoryItemProps {
         topLabel: string;
         createdAt: string | Date;
         imageUrl?: string | null;
-        confidence: string;
+        confidence: number;
         allResults: ClassificationResult[];
     };
 }
@@ -46,7 +46,7 @@ export function HistoryItem({ item }: HistoryItemProps) {
         topLabel: string;
         createdAt: string | Date;
         imageUrl?: string | null;
-        confidence: string;
+        confidence: number;
         allResults: ClassificationResult[];
     }
 
