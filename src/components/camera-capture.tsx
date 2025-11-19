@@ -247,10 +247,10 @@ export const CameraCapture: React.FC = () => {
                             >
                                 <ClassificationCard
                                     results={results}
-                                    onSuggest={() => {
-                                        // Handle suggestion feature
-                                        toast.info("Fitur saran pengelolaan sampah akan segera hadir");
-                                    }}
+                                // onSuggest={() => {
+                                //     // Handle suggestion feature
+                                //     toast.info("Fitur saran pengelolaan sampah akan segera hadir");
+                                // }}
                                 />
                             </motion.div>
                         )}

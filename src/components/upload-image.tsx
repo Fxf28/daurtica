@@ -201,10 +201,10 @@ export const UploadImage = () => {
                             {!loading && results.length > 0 && (
                                 <ClassificationCard
                                     results={results}
-                                    onSuggest={() => {
-                                        // Handle suggestion feature
-                                        toast.info("Fitur saran pengelolaan sampah akan segera hadir");
-                                    }}
+                                // onSuggest={() => {
+                                //     // Handle suggestion feature
+                                //     toast.info("Fitur saran pengelolaan sampah akan segera hadir");
+                                // }}
                                 />
                             )}
                         </div>
