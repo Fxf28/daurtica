@@ -1,4 +1,3 @@
-// src/lib/gemini-ai.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { GenerateEducationPersonalParams as GeminiEducationPrompt, EducationPersonalContent as GeminiEducationResponse } from "@/types/education";
 
@@ -63,6 +62,7 @@ function extractJSONFromText(text: string): GeminiJSONResponse {
   throw new Error("No valid JSON found in response");
 }
 
+// Improved error handling untuk Gemini API
 export async function generateEducationContent(promptData: GeminiEducationPrompt): Promise<GeminiEducationResponse> {
   const { prompt, tags = [] } = promptData;
 
@@ -73,7 +73,13 @@ export async function generateEducationContent(promptData: GeminiEducationPrompt
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash-lite",
+      generationConfig: {
+        maxOutputTokens: 2000, // Batasi output untuk mengurangi load
+        temperature: 0.7,
+      },
+    });
 
     const systemPrompt = `
 You are an environmental education expert. Create comprehensive educational content about waste management in Indonesian.
@@ -105,30 +111,48 @@ Ensure the content is:
 - Related to waste management and environmental sustainability
 `;
 
-    const result = await model.generateContent(systemPrompt);
-    const response = await result.response;
-    const text = response.text();
-
-    console.log("Raw Gemini response:", text); // Debug log
+    // Tambahkan timeout untuk request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 detik timeout
 
     try {
-      const jsonData = extractJSONFromText(text);
-      // Convert to expected response type
-      return {
-        title: jsonData.title,
-        content: jsonData.content,
-        sections: jsonData.sections,
-      };
-    } catch (parseError) {
-      console.error("Failed to parse Gemini response as JSON:", parseError);
-      console.log("Raw response that failed:", text);
+      const result = await model.generateContent(systemPrompt);
+      clearTimeout(timeoutId);
 
-      // Fallback jika parsing gagal
-      return createFallbackContent(prompt, tags);
+      const response = await result.response;
+      const text = response.text();
+
+      try {
+        const jsonData = extractJSONFromText(text);
+        // Convert to expected response type
+        return {
+          title: jsonData.title,
+          content: jsonData.content,
+          sections: jsonData.sections,
+        };
+      } catch (parseError) {
+        console.error("Failed to parse Gemini response as JSON:", parseError);
+        return createFallbackContent(prompt, tags);
+      }
+    } catch (timeoutError) {
+      console.error("Gemini AI request timeout:", timeoutError);
+      throw new Error("Request timeout - model mungkin sedang overload");
     }
   } catch (error) {
     console.error("Gemini AI API error:", error);
-    return await mockGeminiGenerate(prompt);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.includes("503") || error.message.includes("overload")) {
+        throw new Error("Model sedang overload. Silakan coba lagi dalam beberapa saat.");
+      } else if (error.message.includes("429") || error.message.includes("rate limit")) {
+        throw new Error("Rate limit exceeded. Silakan coba lagi nanti.");
+      } else if (error.message.includes("timeout")) {
+        throw new Error("Request timeout. Model sedang sibuk, silakan coba lagi.");
+      }
+    }
+
+    throw error; // Re-throw error untuk ditangani oleh retry mechanism
   }
 }
 

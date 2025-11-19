@@ -1,7 +1,6 @@
-// src/app/api/education/personal/route.ts
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { educationPersonal } from "@/db/schema";
+import { educationPersonal, userGenerateUsage } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, desc, count, and, or, like, sql } from "drizzle-orm";
@@ -12,6 +11,56 @@ const GenerateEducationPersonalSchema = z.object({
   prompt: z.string().min(1).max(1000),
   tags: z.array(z.string()).default([]),
 });
+
+// Helper function untuk check dan update usage
+async function checkAndUpdateGenerateUsage(userId: string): Promise<{ allowed: boolean; count: number; limit: number }> {
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const limit = 10;
+
+  try {
+    // Cari record usage untuk user hari ini
+    const existingUsage = await db
+      .select()
+      .from(userGenerateUsage)
+      .where(and(eq(userGenerateUsage.userId, userId), eq(userGenerateUsage.date, today)))
+      .limit(1);
+
+    if (existingUsage.length === 0) {
+      // Buat record baru untuk hari ini
+      await db.insert(userGenerateUsage).values({
+        userId,
+        date: today,
+        count: 1,
+        lastGeneratedAt: new Date(),
+      });
+
+      return { allowed: true, count: 1, limit };
+    }
+
+    const usage = existingUsage[0];
+
+    // Check jika sudah mencapai limit
+    if (usage.count >= limit) {
+      return { allowed: false, count: usage.count, limit };
+    }
+
+    // Update count
+    await db
+      .update(userGenerateUsage)
+      .set({
+        count: usage.count + 1,
+        lastGeneratedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(userGenerateUsage.id, usage.id));
+
+    return { allowed: true, count: usage.count + 1, limit };
+  } catch (error) {
+    console.error("Error checking generate usage:", error);
+    // Jika ada error, tetap izinkan generate (fail-open strategy)
+    return { allowed: true, count: 0, limit };
+  }
+}
 
 // GET - Get user's personal education articles
 export async function GET(req: Request) {
@@ -105,6 +154,23 @@ export async function POST(req: Request) {
 
     const { prompt, tags } = validationResult.data;
 
+    // Check generate usage limit
+    const usageCheck = await checkAndUpdateGenerateUsage(userId);
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Limit Exceeded",
+          message: `Anda telah mencapai batas generate hari ini. Maksimal ${usageCheck.limit} generate per hari.`,
+          details: {
+            currentCount: usageCheck.count,
+            limit: usageCheck.limit,
+            resetTime: "00:00 WIB",
+          },
+        },
+        { status: 429 } // Too Many Requests
+      );
+    }
+
     // Create a placeholder record first
     const [placeholderRecord] = await db
       .insert(educationPersonal)
@@ -136,6 +202,11 @@ export async function POST(req: Request) {
       {
         message: "Education content generation started",
         data: placeholderRecord,
+        usage: {
+          current: usageCheck.count,
+          limit: usageCheck.limit,
+          remaining: usageCheck.limit - usageCheck.count,
+        },
       },
       { status: 202 } // Accepted
     );

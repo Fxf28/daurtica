@@ -1,6 +1,6 @@
 // src/lib/api/education-personal.ts
 import { z } from "zod";
-import type { EducationPersonal, GenerateEducationPersonal, EducationPersonalFilters } from "@/types/education";
+import type { EducationPersonal, GenerateEducationPersonal, EducationPersonalFilters, GenerateEducationPersonalResponse, RegenerateEducationPersonalResponse } from "@/types/education";
 
 // Gunakan Zod schema yang sesuai dengan types yang sudah ada
 export const EducationPersonalSectionSchema = z.object({
@@ -109,7 +109,7 @@ export async function getEducationPersonalById(id: string): Promise<EducationPer
   return validatedResult.data;
 }
 
-export async function generateEducationPersonal(data: GenerateEducationPersonal): Promise<EducationPersonal> {
+export async function generateEducationPersonal(data: GenerateEducationPersonal): Promise<GenerateEducationPersonalResponse> {
   const response = await fetch("/api/education/personal", {
     method: "POST",
     headers: {
@@ -124,16 +124,10 @@ export async function generateEducationPersonal(data: GenerateEducationPersonal)
   }
 
   const result = await response.json();
-  const validatedResult = EducationPersonalResponseSchema.safeParse(result.data);
-
-  if (!validatedResult.success) {
-    throw new Error("Invalid response from server");
-  }
-
-  return validatedResult.data;
+  return result;
 }
 
-export async function regenerateEducationPersonal(id: string): Promise<{ success: boolean; message: string }> {
+export async function regenerateEducationPersonal(id: string): Promise<RegenerateEducationPersonalResponse> {
   const response = await fetch(`/api/education/personal/${id}/generate`, {
     method: "POST",
     headers: {
@@ -146,7 +140,8 @@ export async function regenerateEducationPersonal(id: string): Promise<{ success
     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
 
-  return { success: true, message: "Regeneration started" };
+  const result = await response.json();
+  return result;
 }
 
 export async function deleteEducationPersonal(id: string): Promise<{ success: boolean }> {
@@ -163,4 +158,24 @@ export async function deleteEducationPersonal(id: string): Promise<{ success: bo
   }
 
   return { success: true };
+}
+
+export async function getEducationPersonalUsage(): Promise<{
+  current: number;
+  limit: number;
+  remaining: number;
+}> {
+  const response = await fetch("/api/education/personal/usage", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
 }

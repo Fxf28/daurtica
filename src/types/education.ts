@@ -143,3 +143,25 @@ export interface EducationPersonalListResponse {
     hasPrevPage: boolean;
   };
 }
+
+// Tambahkan interface untuk API response dengan usage info
+
+export interface GenerateEducationPersonalResponse {
+  message: string;
+  data: EducationPersonal;
+  usage?: {
+    current: number;
+    limit: number;
+    remaining: number;
+  };
+}
+
+export interface RegenerateEducationPersonalResponse {
+  message: string;
+  data: { id: string };
+  usage?: {
+    current: number;
+    limit: number;
+    remaining: number;
+  };
+}

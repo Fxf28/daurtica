@@ -122,3 +122,17 @@ export type UpdateEducationPublic = Partial<InsertEducationPublic>;
 
 export type EducationPersonal = typeof educationPersonal.$inferSelect;
 export type InsertEducationPersonal = typeof educationPersonal.$inferInsert;
+
+// table baru untuk tracking generate usage
+export const userGenerateUsage = pgTable("user_generate_usage", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // Format: YYYY-MM-DD
+  count: integer("count").default(0).notNull(),
+  lastGeneratedAt: timestamp("last_generated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Buat unique constraint untuk user dan date
+export const userGenerateUsageRelations = pgTable;

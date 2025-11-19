@@ -7,19 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { EducationPersonal } from "@/types/education";
-import { Calendar, User, Eye, Tag, Clock, RefreshCw, Trash2 } from "lucide-react";
+import { Calendar, User, Eye, Tag, Clock, RefreshCw, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { regenerateEducationPersonal, deleteEducationPersonal } from "@/lib/api/education-personal";
 import { toast } from "sonner";
 
+// Tambahkan prop interface
 interface EducationPersonalItemProps {
     article: EducationPersonal;
     onUpdate: () => void;
+    onArticleUpdated?: (article: EducationPersonal) => void;
 }
 
-export function EducationPersonalItem({ article, onUpdate }: EducationPersonalItemProps) {
+export function EducationPersonalItem({ article, onUpdate, onArticleUpdated }: EducationPersonalItemProps) {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
     const formatDate = (dateInput: Date | string) => {
         const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
@@ -39,11 +42,37 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
         return `${minutes} menit baca`;
     };
 
+    const toggleSection = (index: number) => {
+        setExpandedSections(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
+
     const handleRegenerate = async () => {
         setIsRegenerating(true);
         try {
             await regenerateEducationPersonal(article.id);
             toast.success("Regenerasi artikel dimulai!");
+
+            // Notify parent tentang regenerasi
+            if (onArticleUpdated) {
+                onArticleUpdated({
+                    ...article,
+                    title: "Regenerating...",
+                    generatedContent: {
+                        title: "Regenerating...",
+                        content: "Your content is being regenerated. Please wait a moment.",
+                        sections: [],
+                    }
+                });
+            }
+
             onUpdate();
         } catch (error) {
             console.error("Regeneration failed:", error);
@@ -84,6 +113,13 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
                 return <h3 key={index} className="text-lg font-bold mt-4 mb-2 text-foreground">{paragraph.substring(4)}</h3>;
             } else if (paragraph.startsWith('#### ')) {
                 return <h4 key={index} className="text-base font-bold mt-3 mb-2 text-foreground">{paragraph.substring(5)}</h4>;
+            } else if (paragraph.startsWith('- ') || paragraph.startsWith('* ')) {
+                return (
+                    <div key={index} className="flex items-start mb-2">
+                        <span className="text-foreground mr-2 mt-1">•</span>
+                        <span className="text-foreground flex-1">{paragraph.substring(2)}</span>
+                    </div>
+                );
             } else {
                 // Handle basic markdown formatting
                 const elements: ReactNode[] = [];
@@ -129,6 +165,28 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
         });
     };
 
+    // Helper untuk render section content dengan format yang lebih baik
+    const renderSectionContent = (content: string): ReactNode[] => {
+        return content.split('\n').map((paragraph, index): ReactNode => {
+            if (paragraph.trim() === '') {
+                return <div key={index} className="h-3" />;
+            } else if (paragraph.startsWith('- ') || paragraph.startsWith('* ')) {
+                return (
+                    <div key={index} className="flex items-start mb-2">
+                        <span className="text-muted-foreground mr-2 mt-1">•</span>
+                        <span className="text-muted-foreground flex-1">{paragraph.substring(2)}</span>
+                    </div>
+                );
+            } else {
+                return (
+                    <p key={index} className="mb-3 leading-relaxed text-muted-foreground">
+                        {paragraph}
+                    </p>
+                );
+            }
+        });
+    };
+
     return (
         <>
             {/* Card Item */}
@@ -156,7 +214,7 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
                 </CardHeader>
 
                 <CardContent className="pb-4 flex-1 flex flex-col">
-                    {/* Tags - PERBAIKAN: Tambah max-width dan truncate */}
+                    {/* Tags */}
                     {article.tags && article.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-3">
                             {article.tags.slice(0, 3).map((tag) => (
@@ -164,7 +222,7 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
                                     key={tag}
                                     variant="secondary"
                                     className="text-xs max-w-[120px] truncate"
-                                    title={tag} // Tooltip untuk tag panjang
+                                    title={tag}
                                 >
                                     <Tag className="h-3 w-3 mr-1 flex-shrink-0" />
                                     <span className="truncate">{tag}</span>
@@ -194,7 +252,7 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
                                 </p>
                             </div>
 
-                            {/* Section badges - PERBAIKAN: Tambah max-width */}
+                            {/* Section badges */}
                             <div className="flex flex-wrap gap-1 mt-2">
                                 {article.generatedContent.sections?.slice(0, 2).map((section, index) => (
                                     <Badge
@@ -270,7 +328,7 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
                         </div>
                     </DialogHeader>
 
-                    {/* Tags - PERBAIKAN: Tambah max-width dan wrap yang lebih baik */}
+                    {/* Tags */}
                     {article.tags && article.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                             {article.tags.map((tag) => (
@@ -295,20 +353,62 @@ export function EducationPersonalItem({ article, onUpdate }: EducationPersonalIt
 
                     {/* Generated Content */}
                     <div className="space-y-6">
-                        <div className="prose prose-sm sm:prose-lg max-w-none">
+                        {/* Main Content */}
+                        <div className="prose prose-sm sm:prose-base max-w-none bg-background p-4 rounded-lg border">
+                            <div className="text-lg font-semibold mb-4 text-foreground">Konten Utama</div>
                             {renderMarkdownContent(article.generatedContent.content)}
                         </div>
 
-                        {/* Sections */}
+                        {/* Sections dengan Accordion */}
                         {article.generatedContent.sections && article.generatedContent.sections.length > 0 && (
                             <div className="space-y-4">
                                 <h3 className="text-lg font-semibold">Bagian-bagian Artikel:</h3>
-                                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+                                <div className="space-y-3">
                                     {article.generatedContent.sections.map((section, index) => (
-                                        <div key={index} className="border rounded-lg p-4 bg-card">
-                                            <h4 className="font-semibold text-base mb-2">{section.title}</h4>
+                                        <div key={index} className="border rounded-lg overflow-hidden bg-card">
+                                            <button
+                                                onClick={() => toggleSection(index)}
+                                                className="w-full p-4 text-left flex justify-between items-center hover:bg-muted/50 transition-colors"
+                                            >
+                                                <h4 className="font-semibold text-base flex items-center gap-2">
+                                                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                                                        {index + 1}
+                                                    </span>
+                                                    {section.title}
+                                                </h4>
+                                                {expandedSections.has(index) ? (
+                                                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                                ) : (
+                                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                )}
+                                            </button>
+                                            {expandedSections.has(index) && (
+                                                <div className="p-4 border-t bg-muted/20">
+                                                    <div className="prose prose-sm max-w-none">
+                                                        {renderSectionContent(section.content)}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
+                                </div>
+
+                                {/* Quick Actions untuk Sections */}
+                                <div className="flex gap-2 flex-wrap">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setExpandedSections(new Set(article.generatedContent.sections?.map((_, i) => i)))}
+                                    >
+                                        Buka Semua
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setExpandedSections(new Set())}
+                                    >
+                                        Tutup Semua
+                                    </Button>
                                 </div>
                             </div>
                         )}

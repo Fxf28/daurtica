@@ -4,17 +4,26 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getEducationPersonalList } from "@/lib/api/education-personal";
+import { getEducationPersonalList, getEducationPersonalUsage } from "@/lib/api/education-personal";
 import type { EducationPersonal } from "@/types/education";
-import { RefreshCw, Plus } from "lucide-react";
+import { RefreshCw, Plus, AlertCircle } from "lucide-react";
 import { EducationPersonalItem } from "./education-personal-item";
 import { TestEducationGenerate } from "@/components/test-education-generate";
+import { Badge } from "@/components/ui/badge";
+
+interface UsageInfo {
+    current: number;
+    limit: number;
+    remaining: number;
+}
 
 export function EducationPersonalList() {
     const [articles, setArticles] = useState<EducationPersonal[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showGenerator, setShowGenerator] = useState(false);
+    const [newlyGeneratedId, setNewlyGeneratedId] = useState<string | null>(null);
+    const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
 
     const loadArticles = async () => {
         try {
@@ -29,11 +38,44 @@ export function EducationPersonalList() {
         }
     };
 
+    const loadUsageInfo = async () => {
+        try {
+            const usage = await getEducationPersonalUsage();
+            setUsageInfo(usage);
+        } catch (error) {
+            console.error("Failed to load usage info:", error);
+        }
+    };
+
     useEffect(() => {
         loadArticles();
+        loadUsageInfo();
     }, []);
 
-    if (loading) {
+    // Auto-refresh ketika ada newlyGeneratedId berubah
+    useEffect(() => {
+        if (newlyGeneratedId) {
+            // Refresh articles untuk mendapatkan data terbaru
+            loadArticles();
+            // Refresh usage info
+            loadUsageInfo();
+            setNewlyGeneratedId(null);
+        }
+    }, [newlyGeneratedId]);
+
+    // Function untuk menambah artikel baru ke list tanpa refresh
+    const addNewArticle = (newArticle: EducationPersonal) => {
+        setArticles(prev => [newArticle, ...prev]);
+    };
+
+    // Function untuk update artikel yang sudah ada
+    const updateArticle = (updatedArticle: EducationPersonal) => {
+        setArticles(prev => prev.map(article =>
+            article.id === updatedArticle.id ? updatedArticle : article
+        ));
+    };
+
+    if (loading && articles.length === 0) {
         return (
             <Card>
                 <CardContent className="pt-6">
@@ -48,7 +90,7 @@ export function EducationPersonalList() {
 
     return (
         <div className="space-y-6">
-            {/* Header dengan Toggle Generator */}
+            {/* Header dengan Usage Info */}
             <Card>
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="space-y-1">
@@ -56,10 +98,34 @@ export function EducationPersonalList() {
                         <p className="text-sm text-muted-foreground">
                             Konten edukasi yang digenerate khusus untuk Anda
                         </p>
+
+                        {/* Usage Info Badge */}
+                        {usageInfo && (
+                            <div className="flex items-center gap-2 mt-2">
+                                <Badge
+                                    variant={
+                                        usageInfo.remaining === 0 ? "destructive" :
+                                            usageInfo.remaining <= 2 ? "default" : "secondary"
+                                    }
+                                    className="text-xs"
+                                >
+                                    {usageInfo.remaining === 0 ? (
+                                        <AlertCircle className="h-3 w-3 mr-1" />
+                                    ) : null}
+                                    Sisa Generate: {usageInfo.remaining}/{usageInfo.limit}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                    Reset: 00:00 WIB
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Button
-                            onClick={loadArticles}
+                            onClick={() => {
+                                loadArticles();
+                                loadUsageInfo();
+                            }}
                             variant="outline"
                             size="sm"
                             className="flex-1 sm:flex-none"
@@ -71,6 +137,7 @@ export function EducationPersonalList() {
                             onClick={() => setShowGenerator(!showGenerator)}
                             size="sm"
                             className="flex-1 sm:flex-none"
+                            disabled={usageInfo?.remaining === 0}
                         >
                             <Plus className="h-4 w-4 mr-2" />
                             {showGenerator ? "Tutup Generator" : "Generate Baru"}
@@ -81,7 +148,10 @@ export function EducationPersonalList() {
 
             {/* Generator Section */}
             {showGenerator && (
-                <TestEducationGenerate />
+                <TestEducationGenerate
+                    onGenerateSuccess={(articleId) => setNewlyGeneratedId(articleId)}
+                    onNewArticleCreated={addNewArticle}
+                />
             )}
 
             {/* Articles Grid */}
@@ -111,10 +181,17 @@ export function EducationPersonalList() {
                                     onClick={() => setShowGenerator(true)}
                                     className="w-full"
                                     size="lg"
+                                    disabled={usageInfo?.remaining === 0}
                                 >
                                     <Plus className="h-5 w-5 mr-2" />
-                                    Generate Konten Pertama
+                                    {usageInfo?.remaining === 0 ? "Batas Generate Habis" : "Generate Konten Pertama"}
                                 </Button>
+
+                                {usageInfo?.remaining === 0 && (
+                                    <p className="text-xs text-muted-foreground mt-3">
+                                        Limit generate akan direset besok pukul 00:00 WIB
+                                    </p>
+                                )}
                             </div>
                         </div>
                     ) : (
@@ -122,6 +199,11 @@ export function EducationPersonalList() {
                             <div className="flex justify-between items-center mb-6">
                                 <div className="text-sm text-muted-foreground">
                                     Menampilkan {articles.length} artikel
+                                    {usageInfo && (
+                                        <span className="ml-2">
+                                            • Sisa generate: <strong>{usageInfo.remaining}</strong>/{usageInfo.limit}
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="text-xs text-muted-foreground hidden sm:block">
                                     Klik kartu untuk membaca detail
@@ -134,6 +216,7 @@ export function EducationPersonalList() {
                                         key={article.id}
                                         article={article}
                                         onUpdate={loadArticles}
+                                        onArticleUpdated={updateArticle}
                                     />
                                 ))}
                             </div>

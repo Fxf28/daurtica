@@ -1,10 +1,54 @@
-// src/app/api/education/personal/[id]/generate/route.ts
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { educationPersonal } from "@/db/schema";
+import { educationPersonal, userGenerateUsage } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { inngest } from "@/lib/inngest";
+
+// Helper function untuk check dan update usage (sama dengan di route utama)
+async function checkAndUpdateGenerateUsage(userId: string): Promise<{ allowed: boolean; count: number; limit: number }> {
+  const today = new Date().toISOString().split("T")[0];
+  const limit = 10;
+
+  try {
+    const existingUsage = await db
+      .select()
+      .from(userGenerateUsage)
+      .where(and(eq(userGenerateUsage.userId, userId), eq(userGenerateUsage.date, today)))
+      .limit(1);
+
+    if (existingUsage.length === 0) {
+      await db.insert(userGenerateUsage).values({
+        userId,
+        date: today,
+        count: 1,
+        lastGeneratedAt: new Date(),
+      });
+
+      return { allowed: true, count: 1, limit };
+    }
+
+    const usage = existingUsage[0];
+
+    if (usage.count >= limit) {
+      return { allowed: false, count: usage.count, limit };
+    }
+
+    await db
+      .update(userGenerateUsage)
+      .set({
+        count: usage.count + 1,
+        lastGeneratedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(userGenerateUsage.id, usage.id));
+
+    return { allowed: true, count: usage.count + 1, limit };
+  } catch (error) {
+    console.error("Error checking generate usage:", error);
+    return { allowed: true, count: 0, limit };
+  }
+}
 
 // POST - Regenerate content for existing personal article
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,6 +77,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const article = existingArticle[0];
+
+    // Check generate usage limit untuk regenerate juga
+    const usageCheck = await checkAndUpdateGenerateUsage(userId);
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Limit Exceeded",
+          message: `Anda telah mencapai batas generate hari ini. Maksimal ${usageCheck.limit} generate per hari.`,
+          details: {
+            currentCount: usageCheck.count,
+            limit: usageCheck.limit,
+            resetTime: "00:00 WIB",
+          },
+        },
+        { status: 429 }
+      );
+    }
 
     // Update article status to indicate regeneration
     await db
@@ -63,8 +124,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       {
         message: "Education content regeneration started",
         data: { id },
+        usage: {
+          current: usageCheck.count,
+          limit: usageCheck.limit,
+          remaining: usageCheck.limit - usageCheck.count,
+        },
       },
-      { status: 202 } // Accepted
+      { status: 202 }
     );
   } catch (error) {
     console.error("Error starting education regeneration:", error);

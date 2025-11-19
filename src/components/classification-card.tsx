@@ -3,34 +3,36 @@
 import React from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 
 type Props = {
     results: {
         label: string;
         confidence: number;
     }[];
-    onSuggest?: () => void;
+    // onSuggest?: () => void;
 };
 
-export const ClassificationCard: React.FC<Props> = ({ results, onSuggest }) => {
-    const { user, isLoaded } = useUser();
+export const ClassificationCard: React.FC<Props> = ({ results }) => {
+    // onSuggest
+    const { isLoaded } = useUser();
+    // const { user, isLoaded } = useUser();
 
-    const handleSuggestClick = () => {
-        if (!user) {
-            toast.error("Silakan login untuk menggunakan fitur ini");
-            return;
-        }
+    // const handleSuggestClick = () => {
+    //     if (!user) {
+    //         toast.error("Silakan login untuk menggunakan fitur ini");
+    //         return;
+    //     }
 
-        if (onSuggest) {
-            onSuggest();
-        } else {
-            toast.info("Fitur saran akan segera tersedia");
-        }
-    };
+    //     if (onSuggest) {
+    //         onSuggest();
+    //     } else {
+    //         toast.info("Fitur saran akan segera tersedia");
+    //     }
+    // };
 
     // Show loading state while user auth is being checked
     if (!isLoaded) {
@@ -93,7 +95,7 @@ export const ClassificationCard: React.FC<Props> = ({ results, onSuggest }) => {
                 </p>
 
                 {/* Button untuk saran pengelolaan sampah */}
-                <Button
+                {/* <Button
                     onClick={handleSuggestClick}
                     className="w-full"
                     variant="secondary"
@@ -105,7 +107,7 @@ export const ClassificationCard: React.FC<Props> = ({ results, onSuggest }) => {
                             ? "Fitur Segera Hadir"
                             : "Dapatkan Saran Pengelolaan Sampah"
                     }
-                </Button>
+                </Button> */}
             </CardFooter>
         </Card>
     );

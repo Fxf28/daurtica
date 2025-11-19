@@ -1,11 +1,10 @@
-// src/lib/inngest/functions.ts
 import { inngest } from "@/lib/inngest";
 import { db } from "@/db";
 import { educationPersonal } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { generateEducationContent as generateWithGemini } from "@/lib/gemini-ai";
-import type { EducationPersonalContent } from "@/types/education"; // ✅ Gunakan type yang ada
+import type { EducationPersonalContent } from "@/types/education";
 
 // Event schemas untuk type safety
 const GenerateEventSchema = z.object({
@@ -14,6 +13,38 @@ const GenerateEventSchema = z.object({
   userId: z.string(),
   educationPersonalId: z.string().optional(),
 });
+
+// Helper function untuk delay dengan exponential backoff
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Retry mechanism dengan exponential backoff
+async function retryWithBackoff<T>(operation: () => Promise<T>, maxRetries: number = 3, baseDelay: number = 1000): Promise<T> {
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+
+      // Check jika error adalah model overload (503) atau rate limit (429)
+      const isOverloadError = error instanceof Error && (error.message.includes("503") || error.message.includes("overload") || error.message.includes("429") || error.message.includes("rate limit"));
+
+      // Jika bukan overload error atau sudah mencapai max retries, throw error
+      if (!isOverloadError || attempt === maxRetries) {
+        throw error;
+      }
+
+      // Exponential backoff dengan jitter
+      const delayTime = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      console.warn(`Model overloaded, retrying in ${Math.round(delayTime)}ms (attempt ${attempt}/${maxRetries})`);
+
+      await delay(delayTime);
+    }
+  }
+
+  throw lastError!;
+}
 
 // Mock function menggunakan type yang sudah ada
 async function mockGeminiGenerate(prompt: string): Promise<EducationPersonalContent> {
@@ -47,10 +78,10 @@ export const generateEducationContentFunction = inngest.createFunction(
   {
     id: "generate-education-content",
     concurrency: {
-      limit: 3,
+      limit: 2, // Kurangi concurrency limit untuk mengurangi overload
       key: "event.data.userId",
     },
-    retries: 2,
+    retries: 5, // Tingkatkan retries untuk handle overload
   },
   { event: "education/generate" },
   async ({ event, step }) => {
@@ -62,19 +93,24 @@ export const generateEducationContentFunction = inngest.createFunction(
     const { prompt, tags, userId, educationPersonalId } = validationResult.data;
 
     try {
-      // Step 1: Generate content - return type EducationPersonalContent
+      // Step 1: Generate content dengan retry mechanism
       const generatedContent: EducationPersonalContent = await step.run("generate-content", async () => {
         console.log(`Generating content for user ${userId}, prompt: ${prompt}`);
 
         try {
-          return await generateWithGemini({ prompt, tags: tags || [] });
+          // Gunakan retry mechanism untuk handle overload
+          return await retryWithBackoff(
+            () => generateWithGemini({ prompt, tags: tags || [] }),
+            3, // max retries
+            2000 // base delay 2 detik
+          );
         } catch (error) {
-          console.error("Gemini AI failed, using mock:", error);
+          console.error("Gemini AI failed after retries, using mock:", error);
           return await mockGeminiGenerate(prompt);
         }
       });
 
-      // Step 2: Save to database - menggunakan type yang konsisten
+      // Step 2: Save to database
       const educationRecord = await step.run("save-to-database", async () => {
         if (educationPersonalId) {
           // Update existing record
@@ -82,7 +118,7 @@ export const generateEducationContentFunction = inngest.createFunction(
             .update(educationPersonal)
             .set({
               title: generatedContent.title,
-              generatedContent, // ✅ Type sudah match dengan database schema
+              generatedContent,
               updatedAt: new Date(),
             })
             .where(eq(educationPersonal.id, educationPersonalId))
@@ -96,7 +132,7 @@ export const generateEducationContentFunction = inngest.createFunction(
             .values({
               userId,
               prompt,
-              generatedContent, // ✅ Type sudah match
+              generatedContent,
               title: generatedContent.title,
               tags: tags || [],
             })
@@ -132,11 +168,16 @@ export const generateEducationContentFunction = inngest.createFunction(
           await db
             .update(educationPersonal)
             .set({
-              title: "Generation Failed",
+              title: "Generation Failed - Model Overloaded",
               generatedContent: {
                 title: "Generation Failed",
-                content: `Maaf, terjadi kesalahan saat menghasilkan konten. Silakan coba lagi. Error: ${error instanceof Error ? error.message : "Unknown error"}`,
-                sections: [],
+                content: `Maaf, model AI sedang overload. Silakan coba lagi dalam beberapa saat. \n\nError: ${error instanceof Error ? error.message : "Unknown error"}`,
+                sections: [
+                  {
+                    title: "Saran",
+                    content: "Silakan coba regenerate konten ini nanti, atau gunakan prompt yang berbeda.",
+                  },
+                ],
               },
               updatedAt: new Date(),
             })
