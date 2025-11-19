@@ -25,6 +25,7 @@ export function Navbar() {
   const navItems = [
     { name: "Beranda", href: "/" },
     { name: "Klasifikasi", href: "/classify" },
+    { name: "Peta", href: "/map" },
     { name: "Edukasi", href: "/education" },
     { name: "Tentang Kami", href: "/about" },
     { name: "Dashboard", href: "/dashboard", requiresAuth: true }

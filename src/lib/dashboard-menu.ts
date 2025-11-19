@@ -1,4 +1,4 @@
-import { Home, History, Camera, Upload, Sparkles, Book, LucideIcon } from "lucide-react";
+import { Home, History, Camera, Upload, Sparkles, Book, LucideIcon, Map } from "lucide-react";
 
 export interface MenuItem {
   href: string;
@@ -8,10 +8,46 @@ export interface MenuItem {
 }
 
 export const menuItems: MenuItem[] = [
-  { href: "/dashboard", icon: Home, label: "Overview", exact: true },
-  { href: "/dashboard/upload", icon: Upload, label: "Upload Gambar", exact: false },
-  { href: "/dashboard/camera", icon: Camera, label: "Kamera Klasifikasi", exact: false },
-  { href: "/dashboard/history", icon: History, label: "Riwayat Klasifikasi", exact: false },
-  { href: "/dashboard/generate", icon: Sparkles, label: "Generate Edukasi", exact: false },
-  { href: "/dashboard/education", icon: Book, label: "Edukasi Publik", exact: false },
+  {
+    href: "/dashboard",
+    icon: Home,
+    label: "Overview",
+    exact: true,
+  },
+  {
+    href: "/dashboard/upload",
+    icon: Upload,
+    label: "Upload Gambar",
+    exact: false,
+  },
+  {
+    href: "/dashboard/camera",
+    icon: Camera,
+    label: "Kamera Klasifikasi",
+    exact: false,
+  },
+  {
+    href: "/dashboard/history",
+    icon: History,
+    label: "Riwayat Klasifikasi",
+    exact: false,
+  },
+  {
+    href: "/dashboard/generate",
+    icon: Sparkles,
+    label: "Generate Edukasi",
+    exact: false,
+  },
+  {
+    href: "/dashboard/education",
+    icon: Book,
+    label: "Edukasi Publik",
+    exact: false,
+  },
+  {
+    href: "/dashboard/waste-banks",
+    icon: Map,
+    label: "Bank Sampah",
+    exact: false,
+  },
 ];

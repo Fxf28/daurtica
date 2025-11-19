@@ -5,7 +5,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { QueryClientProvider } from "./query-client-provider"; // <- TAMBAHKAN INI
+import { QueryClientProvider } from "./query-client-provider";
+import ProgressLoader from '@/components/progress-loader';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <QueryClientProvider> {/* <- TAMBAHKAN INI */}
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+              <ProgressLoader />
               {children}
               <Toaster richColors position="top-right" />
             </ThemeProvider>

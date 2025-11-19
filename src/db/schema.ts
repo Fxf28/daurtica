@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, jsonb, timestamp, numeric, integer, varchar, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, jsonb, timestamp, numeric, integer, varchar, boolean, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -136,3 +136,48 @@ export const userGenerateUsage = pgTable("user_generate_usage", {
 
 // Buat unique constraint untuk user dan date
 export const userGenerateUsageRelations = pgTable;
+
+// Tambahkan table waste_banks
+export const wasteBanks = pgTable("waste_banks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  address: text("address").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  openingHours: text("opening_hours"),
+  description: text("description"),
+  typesAccepted: jsonb("types_accepted").default("[]"), // jenis sampah yang diterima
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by", { length: 255 }).notNull(), // user ID admin yang membuat
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Zod schemas
+export const insertWasteBankSchema = createInsertSchema(wasteBanks, {
+  name: z.string().min(1).max(255),
+  address: z.string().min(1),
+  latitude: z.string().or(z.number()),
+  longitude: z.string().or(z.number()),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  website: z.string().url().optional().or(z.literal("")),
+  openingHours: z.string().optional(),
+  description: z.string().optional(),
+  typesAccepted: z.array(z.string()).default([]),
+}).omit({
+  id: true,
+  createdBy: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateWasteBankSchema = insertWasteBankSchema.partial();
+
+// Type inferences
+export type WasteBank = typeof wasteBanks.$inferSelect;
+export type InsertWasteBank = typeof wasteBanks.$inferInsert;
+export type UpdateWasteBank = Partial<InsertWasteBank>;

@@ -156,3 +156,42 @@
 .prose li {
   @apply mb-1;
 }
+
+/* Leaflet CSS */
+@import "leaflet/dist/leaflet.css";
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 0.5rem;
+}
+
+/* Fix untuk marker icons */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-marker-icon {
+  margin-left: -12px !important;
+  margin-top: -41px !important;
+}
+
+/* Smooth transitions for progress bar */
+.progress-bar-transition {
+  transition: width 0.3s ease-out;
+}
+
+/* Recycle animation */
+@keyframes recycle-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.recycle-spin {
+  animation: recycle-spin 1s linear infinite;
+}

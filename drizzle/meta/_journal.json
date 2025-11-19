@@ -29,6 +29,13 @@
       "when": 1763547816393,
       "tag": "0003_optimal_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1763557777988,
+      "tag": "0004_tricky_wasp",
+      "breakpoints": true
     }
   ]
 }
