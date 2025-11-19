@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export function useNavigationLoading() {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsLoading(false);
-  }, [pathname, searchParams]);
+  }, [pathname]); // Hapus useSearchParams, cukup gunakan pathname
 
   useEffect(() => {
     // Store references to all anchor elements we've added listeners to
