@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClassification } from "@/hooks/use-classification";
-import { useModelStatus } from "@/hooks/use-model-status"; // ✅ IMPORT DISINI
+import { useModelStatus } from "@/hooks/use-model-status";
 import { ClassificationCard } from "@/components/classification-card";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { toast } from "sonner";
@@ -16,10 +16,11 @@ import { saveClassification } from "@/lib/api/classification";
 export const UploadImage = () => {
     const { user } = useUser();
     const { classifyImage, loading, results } = useClassification();
-    const modelStatus = useModelStatus(); // ✅ GUNAKAN DISINI
+    const modelStatus = useModelStatus();
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState(false);
     const [currentFile, setCurrentFile] = useState<File | null>(null);
+    const savedRef = useRef(false); // Untuk mencegah multiple save
 
     const handleFile = async (file: File) => {
         // ✅ Cek status model sebelum proses
@@ -47,6 +48,7 @@ export const UploadImage = () => {
             setSelectedImage(reader.result as string);
             setImageLoading(true);
             setCurrentFile(file);
+            savedRef.current = false; // Reset save flag
             toast.success("Berhasil memilih gambar");
         };
         reader.readAsDataURL(file);
@@ -62,15 +64,16 @@ export const UploadImage = () => {
     // Auto-save to history when results are available and user is logged in
     useEffect(() => {
         const saveToHistory = async () => {
-            if (results.length > 0 && user && currentFile) {
+            if (results.length > 0 && user && currentFile && !savedRef.current) {
+                savedRef.current = true; // Set flag untuk mencegah duplicate save
                 try {
                     await saveClassification({
-                        imageUrl: selectedImage || undefined,
+                        imageFile: currentFile, // Kirim file langsung
                         topLabel: results[0].label,
                         confidence: results[0].confidence,
                         allResults: results,
-                        source: "upload",
-                        processingTime: 150, // You might want to calculate actual processing time
+                        source: "upload" as const,
+                        processingTime: 150,
                         imageSize: currentFile.size,
                         deviceType: "web"
                     });
@@ -99,11 +102,12 @@ export const UploadImage = () => {
         setSelectedImage(null);
         setCurrentFile(null);
         setImageLoading(false);
+        savedRef.current = false; // Reset save flag
     };
 
     return (
         <div className="flex flex-col items-center w-full">
-            {/* ✅ MODEL STATUS INDICATOR - TAMBAHKAN DISINI */}
+            {/* ✅ MODEL STATUS INDICATOR */}
             {modelStatus === "loading" && (
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -136,6 +140,7 @@ export const UploadImage = () => {
                     </button>
                 </motion.div>
             )}
+
             {/* Upload Area */}
             <motion.label
                 htmlFor="fileInput"
@@ -157,7 +162,7 @@ export const UploadImage = () => {
                     accept="image/*"
                     onChange={handleFileChange}
                     className="hidden"
-                    disabled={modelStatus !== "ready"} // ✅ Disable input jika model tidak ready
+                    disabled={modelStatus !== "ready"}
                 />
 
                 {modelStatus === "ready" && (
@@ -201,10 +206,6 @@ export const UploadImage = () => {
                             {!loading && results.length > 0 && (
                                 <ClassificationCard
                                     results={results}
-                                // onSuggest={() => {
-                                //     // Handle suggestion feature
-                                //     toast.info("Fitur saran pengelolaan sampah akan segera hadir");
-                                // }}
                                 />
                             )}
                         </div>

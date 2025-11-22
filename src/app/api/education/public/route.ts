@@ -1,22 +1,21 @@
-// src/app/api/education/public/route.ts
+// app/api/education/public/route.ts
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { educationPublic } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, desc, count, and, or, like, sql } from "drizzle-orm";
+import { uploadToCloudinary } from "@/lib/cloudinary"; // ✅ IMPORT CLOUDINARY
 
 // Validation schemas
 const CreateEducationPublicSchema = z.object({
   title: z.string().min(1).max(255),
   content: z.string().min(1),
-  thumbnailUrl: z.string().url().optional().or(z.literal("")),
+  thumbnailUrl: z.string().optional().or(z.literal("")),
   tags: z.array(z.string()).default([]),
   excerpt: z.string().max(500).optional(),
   isPublished: z.boolean().default(false),
 });
-
-// const UpdateEducationPublicSchema = CreateEducationPublicSchema.partial();
 
 // Helper function untuk generate slug
 function generateSlug(title: string): string {
@@ -49,7 +48,7 @@ function generateExcerpt(content: string, maxLength: number = 200): string {
   return plainText.substring(0, maxLength).trim() + "...";
 }
 
-// GET - Get articles dengan berbagai filter
+// GET - Get articles dengan berbagai filter (TETAP SAMA)
 export async function GET(req: Request) {
   try {
     const { userId } = await auth();
@@ -131,7 +130,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST - Create new article (admin only)
+// POST - Create new article dengan Cloudinary upload
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
@@ -139,10 +138,67 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized", message: "You must be logged in to create articles" }, { status: 401 });
     }
 
-    // Parse and validate body
-    const body = await req.json();
-    const validationResult = CreateEducationPublicSchema.safeParse(body);
+    // Check Content-Type
+    const contentType = req.headers.get("content-type") || "";
 
+    let body;
+    let thumbnailFile: File | null = null;
+    let cloudinaryPublicId: string | null = null;
+    let finalThumbnailUrl: string | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      // Handle FormData dengan upload gambar
+      const formData = await req.formData();
+
+      // Ambil file thumbnail jika ada
+      thumbnailFile = formData.get("thumbnail") as File;
+
+      // Ambil field lainnya
+      const title = formData.get("title") as string;
+      const content = formData.get("content") as string;
+      const tags = formData.get("tags") as string;
+      const excerpt = formData.get("excerpt") as string;
+      const isPublished = formData.get("isPublished") as string;
+
+      // Validasi field required
+      if (!title || !content) {
+        return NextResponse.json({ error: "Missing required fields", message: "Title and content are required" }, { status: 400 });
+      }
+
+      body = {
+        title,
+        content,
+        tags: tags ? JSON.parse(tags) : [],
+        excerpt: excerpt || undefined,
+        isPublished: isPublished ? isPublished === "true" : false,
+        thumbnailUrl: "", // Sementara kosong, akan diisi setelah upload Cloudinary
+      };
+
+      // Upload ke Cloudinary jika ada file
+      if (thumbnailFile && thumbnailFile.size > 0) {
+        try {
+          const uploadResult = await uploadToCloudinary(thumbnailFile);
+          finalThumbnailUrl = uploadResult.secure_url;
+          cloudinaryPublicId = uploadResult.public_id;
+        } catch (uploadError) {
+          console.error("Cloudinary upload error:", uploadError);
+          return NextResponse.json({ error: "Image Upload Failed", message: "Failed to upload thumbnail to Cloudinary" }, { status: 500 });
+        }
+      }
+    } else {
+      // Handle JSON request (untuk kompatibilitas backward)
+      try {
+        body = await req.json();
+      } catch (parseError) {
+        console.error("Failed to parse request JSON:", parseError);
+        return NextResponse.json({ error: "Invalid JSON", message: "Request body must be valid JSON" }, { status: 400 });
+      }
+
+      finalThumbnailUrl = body.thumbnailUrl || null;
+    }
+
+    // Validasi body
+    const validationResult = CreateEducationPublicSchema.safeParse(body);
     if (!validationResult.success) {
       const errorMessages = validationResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
 
@@ -156,7 +212,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { title, content, thumbnailUrl, tags, excerpt, isPublished } = validationResult.data;
+    const { title, content, tags, excerpt, isPublished } = validationResult.data;
 
     // Generate slug from title
     const slug = generateSlug(title);
@@ -179,7 +235,8 @@ export async function POST(req: Request) {
         title,
         slug,
         content,
-        thumbnailUrl: thumbnailUrl || null,
+        thumbnailUrl: finalThumbnailUrl,
+        cloudinaryPublicId, // ✅ Simpan public_id dari Cloudinary
         authorId: userId,
         tags,
         excerpt: finalExcerpt,

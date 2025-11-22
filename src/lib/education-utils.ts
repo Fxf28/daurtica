@@ -1,3 +1,5 @@
+// src/lib/education-utils.ts
+
 import { InsertEducationPublic } from "@/db/schema";
 import { slugify } from "@/lib/utils";
 

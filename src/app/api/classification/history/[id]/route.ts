@@ -5,10 +5,10 @@ import { classificationHistory } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import type { ClassificationHistoryDB, TransformedClassificationHistory } from "@/types/classification";
+import { deleteFromCloudinary } from "@/lib/cloudinary"; // IMPORT DELETE FUNCTION
 
-// Helper function untuk transform data dengan type safety
+// Helper function untuk transform data dengan type safety - TAMBAH cloudinaryPublicId
 function transformClassificationData(item: ClassificationHistoryDB): TransformedClassificationHistory {
-  // Handle allResults dengan type guard
   const allResults = Array.isArray(item.allResults)
     ? item.allResults.map((result: unknown) => {
         if (result && typeof result === "object" && "label" in result && "confidence" in result) {
@@ -26,6 +26,7 @@ function transformClassificationData(item: ClassificationHistoryDB): Transformed
     ...item,
     confidence: parseFloat(item.confidence),
     allResults,
+    // cloudinaryPublicId akan otomatis termasuk jika ada di item
   };
 }
 
@@ -78,7 +79,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// ✅ DELETE - Delete classification history by ID
+// ✅ DELETE - Delete classification history by ID DENGAN HAPUS DI CLOUDINARY
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { userId } = await auth();
@@ -93,16 +94,36 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: "Bad Request", message: "Classification ID is required" }, { status: 400 });
     }
 
+    // Ambil data terlebih dahulu untuk mendapatkan cloudinaryPublicId
+    const existingHistory = await db
+      .select()
+      .from(classificationHistory)
+      .where(and(eq(classificationHistory.id, id), eq(classificationHistory.userId, userId)))
+      .limit(1);
+
+    // Cek jika history tidak ditemukan
+    if (existingHistory.length === 0) {
+      return NextResponse.json({ error: "Not Found", message: "Classification history not found or you don't have permission to delete it" }, { status: 404 });
+    }
+
+    const historyToDelete = existingHistory[0];
+
+    // Hapus gambar dari Cloudinary jika ada cloudinaryPublicId
+    if (historyToDelete.cloudinaryPublicId) {
+      try {
+        await deleteFromCloudinary(historyToDelete.cloudinaryPublicId);
+        console.log(`Deleted image from Cloudinary: ${historyToDelete.cloudinaryPublicId}`);
+      } catch (cloudinaryError) {
+        console.error("Error deleting image from Cloudinary:", cloudinaryError);
+        // Lanjutkan penghapusan data meskipun gagal hapus di Cloudinary
+      }
+    }
+
     // Query database untuk menghapus history by ID dan user ID
     const deletedHistory = await db
       .delete(classificationHistory)
       .where(and(eq(classificationHistory.id, id), eq(classificationHistory.userId, userId)))
       .returning();
-
-    // Cek jika history tidak ditemukan
-    if (deletedHistory.length === 0) {
-      return NextResponse.json({ error: "Not Found", message: "Classification history not found or you don't have permission to delete it" }, { status: 404 });
-    }
 
     // ✅ TRANSFORM DATA: Convert confidence dari string ke number untuk response dengan type safety
     const dbData: ClassificationHistoryDB = deletedHistory[0];

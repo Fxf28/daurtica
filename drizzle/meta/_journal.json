@@ -36,6 +36,20 @@
       "when": 1763557777988,
       "tag": "0004_tricky_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1763831442551,
+      "tag": "0005_chilly_cable",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1763843523755,
+      "tag": "0006_superb_ultragirl",
+      "breakpoints": true
     }
   ]
 }

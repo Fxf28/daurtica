@@ -7,6 +7,7 @@ export interface EducationPublic {
   slug: string;
   content: string;
   thumbnailUrl?: string | null;
+  cloudinaryPublicId?: string | null; // ✅ TAMBAHKAN INI
   authorId: string;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -63,6 +64,7 @@ export interface EducationPublicListResponse {
 
 export interface EducationPublicFormData {
   title: string;
+  slug?: string;
   content: string;
   thumbnailUrl?: string;
   excerpt?: string;
@@ -82,6 +84,7 @@ export type UpdateEducationPublicData = Partial<{
   slug: string;
   content: string;
   thumbnailUrl: string | null;
+  cloudinaryPublicId?: string | null;
   tags: string[] | null;
   excerpt: string | null;
   readingTime: number | null;

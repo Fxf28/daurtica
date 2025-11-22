@@ -8,11 +8,12 @@ export type ClassificationResultDB = {
   confidence: number | string;
 };
 
-// Type untuk data yang sudah ditransform
+// Type untuk data yang sudah ditransform - TAMBAH cloudinaryPublicId
 export interface TransformedClassificationHistory {
   id: string;
   userId: string;
   imageUrl: string | null;
+  cloudinaryPublicId: string | null; // ✅ TAMBAH INI
   topLabel: string;
   confidence: number;
   allResults: Array<{

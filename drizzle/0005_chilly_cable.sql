@@ -1,0 +1,1 @@
+ALTER TABLE "classification_history" ADD COLUMN "cloudinary_public_id" text;

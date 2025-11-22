@@ -1,15 +1,16 @@
 // lib/api/classification.ts
 import { z } from "zod";
 
-// Response schema untuk validasi response - PERBAIKAN: confidence sebagai number
+// Response schema untuk validasi response
 export const ClassificationResponseSchema = z.object({
   message: z.string(),
   data: z.object({
     id: z.string(),
     userId: z.string(),
     imageUrl: z.string().nullable(),
+    cloudinaryPublicId: z.string().nullable(), // ✅ TAMBAH INI
     topLabel: z.string(),
-    confidence: z.number(), // ✅ Diubah dari string ke number
+    confidence: z.number(),
     allResults: z.array(
       z.object({
         label: z.string(),
@@ -25,7 +26,7 @@ export const ClassificationResponseSchema = z.object({
 });
 
 export type SaveClassificationParams = {
-  imageUrl?: string;
+  imageFile?: File | Blob; // ✅ TERIMA BOTH FILE DAN BLOB
   topLabel: string;
   confidence: number;
   allResults: Array<{ label: string; confidence: number }>;
@@ -35,15 +36,48 @@ export type SaveClassificationParams = {
   deviceType?: string;
 };
 
-// PERBAIKAN: Tambah error handling yang lebih robust
 export async function saveClassification(data: SaveClassificationParams) {
   try {
+    const formData = new FormData();
+
+    if (data.imageFile) {
+      // ✅ KONVERSI BLOB KE FILE JIKA PERLU
+      let fileToUpload: File;
+
+      if (data.imageFile instanceof Blob && !(data.imageFile instanceof File)) {
+        // Jika dari camera (Blob), konversi ke File
+        fileToUpload = new File([data.imageFile], `classification-${Date.now()}.jpg`, {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+      } else {
+        // Jika dari upload (sudah File), gunakan langsung
+        fileToUpload = data.imageFile as File;
+      }
+
+      formData.append("image", fileToUpload);
+    }
+
+    formData.append("topLabel", data.topLabel);
+    formData.append("confidence", data.confidence.toString());
+    formData.append("allResults", JSON.stringify(data.allResults));
+    formData.append("source", data.source);
+
+    if (data.processingTime) {
+      formData.append("processingTime", data.processingTime.toString());
+    }
+
+    if (data.imageSize) {
+      formData.append("imageSize", data.imageSize.toString());
+    }
+
+    if (data.deviceType) {
+      formData.append("deviceType", data.deviceType);
+    }
+
     const response = await fetch("/api/classification/history", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
+      body: formData,
     });
 
     if (!response.ok) {

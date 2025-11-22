@@ -1,0 +1,1 @@
+ALTER TABLE "education_public" ADD COLUMN "cloudinary_public_id" varchar(500);

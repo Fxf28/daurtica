@@ -6,10 +6,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, desc, count } from "drizzle-orm";
 import type { ClassificationHistoryDB, TransformedClassificationHistory } from "@/types/classification";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
-// Validation schema
+// Validation schema - TAMBAH cloudinaryPublicId
 const CreateClassificationSchema = z.object({
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: z.string().optional().or(z.literal("")), // Ubah dari url() ke string() untuk FormData
   topLabel: z.string().min(1, "Top label is required"),
   confidence: z.number().min(0).max(1, "Confidence must be between 0 and 1"),
   allResults: z
@@ -26,9 +27,8 @@ const CreateClassificationSchema = z.object({
   deviceType: z.string().optional(),
 });
 
-// Helper function untuk transform data dengan type safety
+// Helper function untuk transform data dengan type safety - TAMBAH cloudinaryPublicId
 function transformClassificationData(item: ClassificationHistoryDB): TransformedClassificationHistory {
-  // Handle allResults dengan type guard
   const allResults = Array.isArray(item.allResults)
     ? item.allResults.map((result: unknown) => {
         if (result && typeof result === "object" && "label" in result && "confidence" in result) {
@@ -46,10 +46,11 @@ function transformClassificationData(item: ClassificationHistoryDB): Transformed
     ...item,
     confidence: parseFloat(item.confidence),
     allResults,
+    // cloudinaryPublicId akan otomatis termasuk jika ada di item
   };
 }
 
-// ✅ POST - Create new classification history
+// ✅ POST - Save classification history
 export async function POST(req: Request) {
   try {
     // --- Authentication ---
@@ -58,16 +59,70 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized", message: "You must be logged in to save classification history" }, { status: 401 });
     }
 
-    // --- Body Parsing & Validation ---
+    // --- Check Content-Type ---
+    const contentType = req.headers.get("content-type") || "";
+
     let body;
-    try {
-      body = await req.json();
-    } catch (parseError) {
-      console.error("Failed to parse request JSON:", parseError);
-      return NextResponse.json({ error: "Invalid JSON", message: "Request body must be valid JSON" }, { status: 400 });
+    let imageFile: File | null = null;
+    let cloudinaryPublicId: string | null = null;
+    let finalImageUrl: string | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      // Handle FormData dengan upload gambar
+      const formData = await req.formData();
+
+      // Ambil file gambar jika ada
+      imageFile = formData.get("image") as File;
+
+      // Ambil field lainnya
+      const topLabel = formData.get("topLabel") as string;
+      const confidence = formData.get("confidence") as string;
+      const allResults = formData.get("allResults") as string;
+      const source = formData.get("source") as string;
+      const processingTime = formData.get("processingTime") as string;
+      const imageSize = formData.get("imageSize") as string;
+      const deviceType = formData.get("deviceType") as string;
+
+      // Validasi field required
+      if (!topLabel || !confidence || !allResults || !source) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+
+      body = {
+        topLabel,
+        confidence: parseFloat(confidence),
+        allResults: JSON.parse(allResults),
+        source,
+        processingTime: processingTime ? parseInt(processingTime) : undefined,
+        imageSize: imageSize ? parseInt(imageSize) : undefined,
+        deviceType,
+        imageUrl: "", // Sementara kosong
+      };
+
+      // Upload ke Cloudinary jika ada file dan ukuran > 0
+      if (imageFile && imageFile.size > 0) {
+        try {
+          const uploadResult = await uploadToCloudinary(imageFile);
+          finalImageUrl = uploadResult.secure_url;
+          cloudinaryPublicId = uploadResult.public_id;
+        } catch (uploadError) {
+          console.error("Cloudinary upload error:", uploadError);
+          return NextResponse.json({ error: "Image Upload Failed", message: "Failed to upload image to Cloudinary" }, { status: 500 });
+        }
+      }
+    } else {
+      // Handle JSON request (untuk kompatibilitas backward)
+      try {
+        body = await req.json();
+      } catch (parseError) {
+        console.error("Failed to parse request JSON:", parseError);
+        return NextResponse.json({ error: "Invalid JSON", message: "Request body must be valid JSON" }, { status: 400 });
+      }
+
+      finalImageUrl = body.imageUrl || null;
     }
 
-    // Zod validation
+    // --- Body Validation ---
     const validationResult = CreateClassificationSchema.safeParse(body);
     if (!validationResult.success) {
       const errorMessages = validationResult.error.issues.map((err: z.ZodIssue) => `${err.path.join(".")}: ${err.message}`);
@@ -82,14 +137,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const { imageUrl, topLabel, confidence, allResults, source, processingTime, imageSize, deviceType } = validationResult.data;
+    const { topLabel, confidence, allResults, source, processingTime, imageSize, deviceType } = validationResult.data;
 
     // --- Database Insert ---
     const result = await db
       .insert(classificationHistory)
       .values({
         userId,
-        imageUrl: imageUrl || null,
+        imageUrl: finalImageUrl,
+        cloudinaryPublicId,
         topLabel,
         confidence: confidence.toString(),
         allResults,
@@ -132,7 +188,7 @@ export async function POST(req: Request) {
   }
 }
 
-// ✅ GET - Get paginated classification history (TANPA params.id)
+// ✅ GET - Tetap sama seperti sebelumnya
 export async function GET(req: Request) {
   try {
     const { userId } = await auth();

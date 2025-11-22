@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useClassification } from "@/hooks/use-classification";
-import { useModelStatus } from "@/hooks/use-model-status"; // ✅ IMPORT DISINI
+import { useModelStatus } from "@/hooks/use-model-status";
 import { ClassificationCard } from "@/components/classification-card";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,11 +20,12 @@ export const CameraCapture: React.FC = () => {
     const { user } = useUser();
     const webcamRef = useRef<Webcam>(null);
     const { classifyImage, loading, results } = useClassification();
-    const modelStatus = useModelStatus(); // ✅ GUNAKAN DISINI
+    const modelStatus = useModelStatus();
     const [capturedImage, setCapturedImage] = useState<string>("");
     const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
     const [imageLoading, setImageLoading] = useState(false);
     const [captureBlob, setCaptureBlob] = useState<Blob | null>(null);
+    const savedRef = useRef(false); // Untuk mencegah multiple save
 
     const videoConstraints = {
         width: 1280,
@@ -35,18 +36,31 @@ export const CameraCapture: React.FC = () => {
     // Auto-save to history when results are available and user is logged in
     useEffect(() => {
         const saveToHistory = async () => {
-            if (results.length > 0 && user && captureBlob) {
+            if (results.length > 0 && user && captureBlob && !savedRef.current) {
+                savedRef.current = true; // Set flag untuk mencegah duplicate save
                 try {
+                    // Buat FormData untuk mengirim file image
+                    const formData = new FormData();
+                    formData.append('image', captureBlob, `camera-${Date.now()}.jpg`);
+                    formData.append('topLabel', results[0].label);
+                    formData.append('confidence', results[0].confidence.toString());
+                    formData.append('allResults', JSON.stringify(results));
+                    formData.append('source', 'camera');
+                    formData.append('processingTime', '200');
+                    formData.append('imageSize', captureBlob.size.toString());
+                    formData.append('deviceType', 'web');
+
                     await saveClassification({
-                        imageUrl: capturedImage,
+                        imageFile: captureBlob, // Kirim blob sebagai file
                         topLabel: results[0].label,
                         confidence: results[0].confidence,
                         allResults: results,
-                        source: "camera",
+                        source: "camera" as const,
                         processingTime: 200,
                         imageSize: captureBlob.size,
                         deviceType: "web"
                     });
+
                     toast.success("Hasil klasifikasi disimpan ke riwayat");
                 } catch (error) {
                     console.error("Failed to save classification:", error);
@@ -55,7 +69,7 @@ export const CameraCapture: React.FC = () => {
             }
         };
         saveToHistory();
-    }, [results, user, capturedImage, captureBlob]);
+    }, [results, user, captureBlob]);
 
     const capture = useCallback(async () => {
         // ✅ Cek status model sebelum capture
@@ -77,6 +91,7 @@ export const CameraCapture: React.FC = () => {
 
         setCapturedImage(imageSrc);
         setImageLoading(true);
+        savedRef.current = false; // Reset save flag
 
         try {
             const response = await fetch(imageSrc);
@@ -88,12 +103,13 @@ export const CameraCapture: React.FC = () => {
             console.error("Capture error:", error);
             toast.error("Gagal memproses gambar");
         }
-    }, [classifyImage, modelStatus]); // ✅ Tambah modelStatus ke dependency
+    }, [classifyImage, modelStatus]);
 
     const retake = () => {
         setCapturedImage("");
         setImageLoading(false);
         setCaptureBlob(null);
+        savedRef.current = false; // Reset save flag
     };
 
     const toggleCamera = () => {
@@ -115,7 +131,7 @@ export const CameraCapture: React.FC = () => {
                     </p>
                 </motion.div>
 
-                {/* ✅ MODEL STATUS INDICATOR - TAMBAHKAN DISINI */}
+                {/* ✅ MODEL STATUS INDICATOR */}
                 {modelStatus === "loading" && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -191,7 +207,7 @@ export const CameraCapture: React.FC = () => {
 
                                     <Button
                                         onClick={capture}
-                                        disabled={loading || modelStatus !== "ready"} // ✅ Disable jika model tidak ready
+                                        disabled={loading || modelStatus !== "ready"}
                                         className="rounded-full w-14 h-14 flex items-center justify-center"
                                         title="Ambil Foto"
                                     >
@@ -247,10 +263,6 @@ export const CameraCapture: React.FC = () => {
                             >
                                 <ClassificationCard
                                     results={results}
-                                // onSuggest={() => {
-                                //     // Handle suggestion feature
-                                //     toast.info("Fitur saran pengelolaan sampah akan segera hadir");
-                                // }}
                                 />
                             </motion.div>
                         )}

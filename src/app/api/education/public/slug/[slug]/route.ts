@@ -5,14 +5,16 @@ import { educationPublic } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 
-// GET - Get article by slug
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { userId } = await auth();
     const { slug } = await params;
 
+    console.log("API Route - Fetching article with slug:", slug);
+
     // Validasi slug
     if (!slug) {
+      console.error("Slang is required");
       return NextResponse.json({ error: "Bad Request", message: "Article slug is required" }, { status: 400 });
     }
 
@@ -33,6 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
     // Check if article exists
     if (article.length === 0) {
+      console.log("Article not found in database");
       return NextResponse.json({ error: "Not Found", message: "Article not found" }, { status: 404 });
     }
 
@@ -41,7 +44,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       data: article[0],
     });
   } catch (error) {
-    console.error("Error fetching article by slug:", error);
+    console.error("Error in API route:", error);
     return NextResponse.json({ error: "Internal Server Error", message: "Failed to fetch article" }, { status: 500 });
   }
 }

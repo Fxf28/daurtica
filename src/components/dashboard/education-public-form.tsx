@@ -1,7 +1,7 @@
 // src/components/dashboard/education-public-form.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2 } from "lucide-react";
+import { X, Plus, Loader2, Upload, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { createEducationPublic, updateEducationPublic } from "@/lib/api/education-public";
 import type { EducationPublic, EducationPublicFormData } from "@/types/education";
@@ -32,6 +32,10 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
     isPublished: false,
   });
   const [newTag, setNewTag] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailLoading, setThumbnailLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize form with article data if editing
   useEffect(() => {
@@ -44,8 +48,51 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
         tags: article.tags || [],
         isPublished: article.isPublished,
       });
+
+      // Set thumbnail preview if article has thumbnail
+      if (article.thumbnailUrl) {
+        setThumbnailPreview(article.thumbnailUrl);
+      }
     }
   }, [article]);
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validasi file
+    if (!file.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB
+      toast.error("Ukuran file maksimal 2MB");
+      return;
+    }
+
+    setThumbnailFile(file);
+    setThumbnailLoading(true);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setThumbnailPreview(e.target?.result as string);
+      setThumbnailLoading(false);
+    };
+    reader.readAsDataURL(file);
+
+    // Clear the thumbnail URL since we're using file upload
+    setFormData(prev => ({ ...prev, thumbnailUrl: "" }));
+  };
+
+  const removeThumbnail = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,13 +105,23 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
     setIsLoading(true);
 
     try {
+      const submitData = {
+        title: formData.title,
+        content: formData.content,
+        tags: formData.tags,
+        excerpt: formData.excerpt,
+        isPublished: formData.isPublished,
+        // Jangan kirim thumbnailUrl jika tidak ada perubahan
+        ...(thumbnailFile && { thumbnailFile }),
+      };
+
       if (article) {
         // Update existing article
-        await updateEducationPublic(article.id, formData);
+        await updateEducationPublic(article.id, submitData);
         toast.success("Artikel berhasil diperbarui");
       } else {
         // Create new article
-        await createEducationPublic(formData);
+        await createEducationPublic(submitData);
         toast.success("Artikel berhasil dibuat");
       }
 
@@ -101,7 +158,6 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
     }
   };
 
-  // ✅ PERBAIKAN: Helper untuk handle excerpt length
   const getExcerptLength = () => {
     return formData.excerpt?.length || 0;
   };
@@ -124,7 +180,7 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Judul Artikel</Label>
+            <Label htmlFor="title">Judul Artikel *</Label>
             <Input
               id="title"
               value={formData.title}
@@ -134,28 +190,88 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
             />
           </div>
 
-          {/* Thumbnail URL */}
+          {/* Thumbnail Upload */}
           <div className="space-y-2">
-            <Label htmlFor="thumbnailUrl">URL Thumbnail (Opsional)</Label>
-            <Input
-              id="thumbnailUrl"
-              type="url"
-              value={formData.thumbnailUrl}
-              onChange={(e) => setFormData(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
-              placeholder="https://example.com/image.jpg"
-            />
-            {formData.thumbnailUrl && (
-              <div className="mt-2">
-                <p className="text-sm text-muted-foreground mb-2">Preview:</p>
-                <Image
-                  src={formData.thumbnailUrl}
-                  alt="Thumbnail preview"
-                  className="w-32 h-20 object-cover rounded border"
-                  width={128}
-                  height={80}
+            <Label htmlFor="thumbnail">Thumbnail Artikel</Label>
+
+            {/* Upload Area */}
+            {!thumbnailPreview && (
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer">
+                <input
+                  ref={fileInputRef}
+                  id="thumbnail"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailChange}
+                  className="hidden"
                 />
+                <label htmlFor="thumbnail" className="cursor-pointer">
+                  <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-sm">
+                    Klik untuk upload thumbnail
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Format: JPG, PNG, WebP (Maks. 2MB)
+                  </p>
+                </label>
               </div>
             )}
+
+            {/* Thumbnail Preview */}
+            {thumbnailPreview && (
+              <div className="space-y-3">
+                <div className="relative inline-block">
+                  <div className="relative w-48 h-32 rounded-lg overflow-hidden border">
+                    {thumbnailLoading ? (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <Image
+                        src={thumbnailPreview}
+                        alt="Thumbnail preview"
+                        fill
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+
+                  {/* Remove button */}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={removeThumbnail}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Ganti Gambar
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Legacy URL Input (hidden but kept for backward compatibility) */}
+            <div className="hidden">
+              <Input
+                id="thumbnailUrl"
+                type="url"
+                value={formData.thumbnailUrl}
+                onChange={(e) => setFormData(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
           </div>
 
           {/* Tags */}
@@ -196,12 +312,11 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
             <Label htmlFor="excerpt">Ringkasan (Opsional)</Label>
             <Textarea
               id="excerpt"
-              value={formData.excerpt || ""} // ✅ PERBAIKAN: Default ke empty string
+              value={formData.excerpt || ""}
               onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
               placeholder="Ringkasan singkat tentang artikel ini..."
               rows={3}
             />
-            {/* ✅ PERBAIKAN: Gunakan helper function untuk length */}
             <p className="text-sm text-muted-foreground">
               {getExcerptLength()}/200 karakter
             </p>
@@ -209,7 +324,7 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
 
           {/* Content */}
           <div className="space-y-2">
-            <Label htmlFor="content">Konten Artikel</Label>
+            <Label htmlFor="content">Konten Artikel *</Label>
             <Textarea
               id="content"
               value={formData.content}

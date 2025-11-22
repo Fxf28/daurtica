@@ -7,10 +7,11 @@ export const classificationHistory = pgTable("classification_history", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   imageUrl: text("image_url"),
+  cloudinaryPublicId: text("cloudinary_public_id"), // Tambahkan field baru
   topLabel: text("top_label").notNull(),
   confidence: numeric("confidence", { precision: 5, scale: 4 }).notNull(),
   allResults: jsonb("all_results").notNull(),
-  source: text("source").notNull(), // "camera" / "upload"
+  source: text("source").notNull(),
   processingTime: integer("processing_time"),
   imageSize: integer("image_size"),
   deviceType: text("device_type"),
@@ -24,6 +25,7 @@ export const educationPublic = pgTable("education_public", {
   slug: varchar("slug", { length: 255 }).unique().notNull(),
   content: text("content").notNull(),
   thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
+  cloudinaryPublicId: varchar("cloudinary_public_id", { length: 500 }), // ✅ TAMBAHKAN INI
   authorId: varchar("author_id", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -48,7 +50,8 @@ export const educationPersonal = pgTable("education_personal", {
 // Zod Schemas - Classification History
 export const insertClassificationHistorySchema = createInsertSchema(classificationHistory, {
   userId: z.string().min(1),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: z.url().optional().or(z.literal("")),
+  cloudinaryPublicId: z.string().optional(), // Tambahkan ke Zod schema
   topLabel: z.string().min(1),
   confidence: z.string().transform((val) => parseFloat(val)),
   allResults: z.array(
@@ -75,7 +78,8 @@ export const insertEducationPublicSchema = createInsertSchema(educationPublic, {
     .max(255)
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase with hyphens"),
   content: z.string().min(1),
-  thumbnailUrl: z.string().url().optional().or(z.literal("")),
+  thumbnailUrl: z.string().optional().or(z.literal("")), // ✅ Ubah dari url() ke string()
+  cloudinaryPublicId: z.string().optional(), // ✅ TAMBAHKAN INI
   tags: z.array(z.string()).default([]),
   excerpt: z.string().max(500).optional(),
   readingTime: z.number().int().positive().optional(),
@@ -163,8 +167,8 @@ export const insertWasteBankSchema = createInsertSchema(wasteBanks, {
   latitude: z.string().or(z.number()),
   longitude: z.string().or(z.number()),
   phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  website: z.string().url().optional().or(z.literal("")),
+  email: z.email().optional().or(z.literal("")),
+  website: z.url().optional().or(z.literal("")),
   openingHours: z.string().optional(),
   description: z.string().optional(),
   typesAccepted: z.array(z.string()).default([]),

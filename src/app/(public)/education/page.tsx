@@ -1,10 +1,9 @@
 // src/app/(public)/education/page.tsx
 "use client"
 
-import { useState, useEffect, useCallback } from "react" // ✅ TAMBAHKAN useCallback
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,16 +12,14 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 import { getEducationPublicList } from "@/lib/api/education-public"
 import type { EducationPublic } from "@/types/education"
 import Image from "next/image"
+import Link from "next/link" // ✅ TAMBAHKAN IMPORT INI
 
 export default function EducationPage() {
     const [articles, setArticles] = useState<EducationPublic[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
-    const [selectedArticle, setSelectedArticle] = useState<EducationPublic | null>(null)
-    const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-    // ✅ PERBAIKAN: Gunakan useCallback untuk memoize fungsi loadArticles
     const loadArticles = useCallback(async () => {
         try {
             setIsLoading(true)
@@ -38,12 +35,12 @@ export default function EducationPage() {
         } finally {
             setIsLoading(false)
         }
-    }, [searchQuery]) // ✅ searchQuery sebagai dependency
+    }, [searchQuery])
 
     // Initial load
     useEffect(() => {
         loadArticles()
-    }, [loadArticles]) // ✅ PERBAIKAN: Tambahkan loadArticles ke dependencies
+    }, [loadArticles])
 
     // Search with debounce
     useEffect(() => {
@@ -52,13 +49,7 @@ export default function EducationPage() {
         }, 500)
 
         return () => clearTimeout(timeoutId)
-    }, [searchQuery, loadArticles]) // ✅ PERBAIKAN: Tambahkan loadArticles ke dependencies
-
-    // Handlers
-    const handleArticleClick = (article: EducationPublic) => {
-        setSelectedArticle(article)
-        setIsDialogOpen(true)
-    }
+    }, [searchQuery, loadArticles])
 
     const formatDate = (dateInput: Date | string) => {
         const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
@@ -74,16 +65,14 @@ export default function EducationPage() {
         return `${minutes} menit baca`
     }
 
-    // Render markdown content as plain text preview
     const renderPlainTextPreview = (content: string, maxLength: number = 150) => {
-        // Remove markdown syntax for preview
         const plainText = content
-            .replace(/#{1,6}\s?/g, '') // Remove headers
-            .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-            .replace(/\*(.*?)\*/g, '$1') // Remove italic
-            .replace(/`(.*?)`/g, '$1') // Remove inline code
-            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links
-            .replace(/\n/g, ' ') // Replace newlines with spaces
+            .replace(/#{1,6}\s?/g, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/`(.*?)`/g, '$1')
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+            .replace(/\n/g, ' ')
             .trim()
 
         if (plainText.length <= maxLength) {
@@ -188,10 +177,7 @@ export default function EducationPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.4, delay: index * 0.1 }}
                                 >
-                                    <Card
-                                        className="h-full hover:shadow-lg cursor-pointer transition-all duration-300 hover:scale-[1.02] group"
-                                        onClick={() => handleArticleClick(article)}
-                                    >
+                                    <Card className="h-full hover:shadow-lg transition-all duration-300 hover:scale-[1.02] group">
                                         {/* Thumbnail */}
                                         {article.thumbnailUrl && (
                                             <div className="aspect-video overflow-hidden rounded-t-lg">
@@ -255,10 +241,13 @@ export default function EducationPage() {
                                         </CardContent>
 
                                         <CardFooter className="pt-0">
-                                            <Button variant="ghost" size="sm" className="w-full group-hover:bg-primary/10">
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                Baca Selengkapnya
-                                            </Button>
+                                            {/* ✅ UBAH: Gunakan Link untuk navigasi ke halaman detail */}
+                                            <Link href={`/education/${article.slug}`} className="w-full">
+                                                <Button variant="ghost" size="sm" className="w-full group-hover:bg-primary/10">
+                                                    <Eye className="h-4 w-4 mr-2" />
+                                                    Baca Selengkapnya
+                                                </Button>
+                                            </Link>
                                         </CardFooter>
                                     </Card>
                                 </motion.div>
@@ -266,78 +255,6 @@ export default function EducationPage() {
                         </div>
                     </>
                 )}
-
-                {/* Article Detail Dialog */}
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        {selectedArticle && (
-                            <>
-                                <DialogHeader>
-                                    <DialogTitle className="text-2xl">{selectedArticle.title}</DialogTitle>
-
-                                    {/* Article Meta */}
-                                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
-                                        <div className="flex items-center gap-1">
-                                            <Calendar className="h-4 w-4" />
-                                            {formatDate(selectedArticle.createdAt)}
-                                        </div>
-                                        {selectedArticle.readingTime && (
-                                            <div className="flex items-center gap-1">
-                                                <Clock className="h-4 w-4" />
-                                                {formatReadingTime(selectedArticle.readingTime)}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Tags */}
-                                    {selectedArticle.tags && selectedArticle.tags.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-3">
-                                            {selectedArticle.tags.map((tag) => (
-                                                <Badge key={tag} variant="secondary">
-                                                    <Tag className="h-3 w-3 mr-1" />
-                                                    {tag}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    )}
-                                </DialogHeader>
-
-                                {/* Thumbnail */}
-                                {selectedArticle.thumbnailUrl && (
-                                    <div className="my-4">
-                                        <Image
-                                            src={selectedArticle.thumbnailUrl}
-                                            alt={selectedArticle.title}
-                                            className="w-full h-64 object-cover rounded-lg"
-                                            width={800}
-                                            height={400}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Article Content */}
-                                <div className="prose prose-lg max-w-none">
-                                    {/* Simple markdown rendering - bisa diganti dengan react-markdown nanti */}
-                                    {selectedArticle.content.split('\n').map((paragraph, index) => {
-                                        if (paragraph.startsWith('# ')) {
-                                            return <h1 key={index} className="text-2xl font-bold mt-6 mb-4">{paragraph.substring(2)}</h1>
-                                        } else if (paragraph.startsWith('## ')) {
-                                            return <h2 key={index} className="text-xl font-bold mt-5 mb-3">{paragraph.substring(3)}</h2>
-                                        } else if (paragraph.startsWith('### ')) {
-                                            return <h3 key={index} className="text-lg font-bold mt-4 mb-2">{paragraph.substring(4)}</h3>
-                                        } else if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                                            return <strong key={index} className="font-bold">{paragraph.substring(2, paragraph.length - 2)}</strong>
-                                        } else if (paragraph.trim() === '') {
-                                            return <br key={index} />
-                                        } else {
-                                            return <p key={index} className="mb-4 leading-relaxed">{paragraph}</p>
-                                        }
-                                    })}
-                                </div>
-                            </>
-                        )}
-                    </DialogContent>
-                </Dialog>
             </main>
         </div>
     )

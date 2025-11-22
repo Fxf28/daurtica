@@ -29,6 +29,7 @@ interface HistoryItemProps {
         topLabel: string;
         createdAt: string | Date;
         imageUrl?: string | null;
+        cloudinaryPublicId?: string | null; // ✅ OPTIONAL: Tambahkan ini
         confidence: number;
         allResults: ClassificationResult[];
     };
@@ -220,6 +221,11 @@ export function HistoryItem({ item }: HistoryItemProps) {
                                 style={{
                                     opacity: imageLoading ? 0 : 1
                                 }}
+                                // ✅ OPTIONAL: Optimasi untuk Cloudinary
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            // Jika ingin optimasi lebih lanjut, bisa tambahkan:
+                            // placeholder="blur"
+                            // blurDataURL="/placeholder-image.jpg"
                             />
                         </div>
                     ) : (
