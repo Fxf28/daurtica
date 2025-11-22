@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://daurtica.id'),
+  metadataBase: new URL('https://daurtica.vercel.app'),
   alternates: {
     canonical: '/',
     languages: {
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'id_ID',
-    url: 'https://daurtica.id',
+    url: 'https://daurtica.vercel.app',
     title: "Daurtica - Platform AI untuk Klasifikasi dan Edukasi Pengelolaan Sampah",
     description: "Klasifikasi sampah otomatis dengan AI, edukasi pengelolaan sampah, dan temukan bank sampah terdekat. Wujudkan Indonesia bersih dan berkelanjutan.",
     siteName: 'Daurtica',
