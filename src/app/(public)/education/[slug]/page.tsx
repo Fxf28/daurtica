@@ -61,6 +61,22 @@ function slugify(text: string) {
 type Heading = { id: string; text: string; level: number };
 
 /**
+ * Inline formatting renderer
+ * Supports: **bold**, *italic*, `inline code`
+ */
+function renderInlineFormatting(text: string) {
+    if (!text) return text;
+
+    return text
+        // bold
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        // italic
+        .replace(/\*(.*?)\*/g, "<em>$1</em>")
+        // inline code
+        .replace(/`([^`]+)`/g, "<code class='bg-muted px-1 py-0.5 rounded text-sm font-mono'>$1</code>");
+}
+
+/**
  * parseContent: parse simple markdown-like text into React nodes and extract headings.
  * Supports: code fences (```), headings (#..####), blockquotes, ordered/unordered lists, inline code, paragraphs.
  */
@@ -81,9 +97,11 @@ function parseContent(content: string) {
             blocks.push(
                 <ol key={`ol-${Math.random()}`} className="my-4 ml-6 list-decimal">
                     {listBuffer.items.map((it, idx) => (
-                        <li key={idx} className="text-foreground">
-                            {it}
-                        </li>
+                        <li
+                            key={idx}
+                            className="text-foreground"
+                            dangerouslySetInnerHTML={{ __html: renderInlineFormatting(it) }}
+                        ></li>
                     ))}
                 </ol>
             );
@@ -91,9 +109,11 @@ function parseContent(content: string) {
             blocks.push(
                 <ul key={`ul-${Math.random()}`} className="my-4 ml-6 list-disc">
                     {listBuffer.items.map((it, idx) => (
-                        <li key={idx} className="text-foreground">
-                            {it}
-                        </li>
+                        <li
+                            key={idx}
+                            className="text-foreground"
+                            dangerouslySetInnerHTML={{ __html: renderInlineFormatting(it) }}
+                        ></li>
                     ))}
                 </ul>
             );
@@ -179,9 +199,8 @@ function parseContent(content: string) {
                 <blockquote
                     key={`bq-${Math.random()}`}
                     className="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground"
-                >
-                    {quote}
-                </blockquote>
+                    dangerouslySetInnerHTML={{ __html: renderInlineFormatting(quote) }}
+                ></blockquote>
             );
             i++;
             continue;
@@ -259,9 +278,11 @@ function parseContent(content: string) {
         }
         const para = paraLines.join("\n").trim();
         blocks.push(
-            <p key={`p-${Math.random()}`} className="mb-4 leading-relaxed text-foreground">
-                {para}
-            </p>
+            <p
+                key={`p-${Math.random()}`}
+                className="mb-4 leading-relaxed text-foreground"
+                dangerouslySetInnerHTML={{ __html: renderInlineFormatting(para) }}
+            ></p>
         );
     }
 
@@ -401,36 +422,54 @@ export default async function EducationArticlePage({ params }: Props) {
                 {/* Right column: TOC (desktop only) */}
                 <aside className="hidden lg:block sticky top-28 self-start">
                     <div className="w-60 p-4 rounded-lg border bg-card shadow-sm">
+
                         <h4 className="text-sm font-semibold mb-3">Daftar Isi</h4>
-                        {headings.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Tidak ada struktur heading.</p>
-                        ) : (
-                            <nav className="text-sm space-y-2">
-                                {headings.map((h) => {
-                                    const indentClass = clsx({
-                                        "pl-0": h.level === 1,
-                                        "pl-3": h.level === 2,
-                                        "pl-6": h.level === 3,
-                                        "pl-9": h.level >= 4,
-                                    });
-                                    return (
-                                        <a
-                                            key={h.id}
-                                            href={`#${h.id}`}
-                                            className={`${indentClass} block hover:text-primary transition text-muted-foreground`}
-                                        >
-                                            <span className={`text-foreground ${h.level === 1 ? "font-medium" : "text-sm"}`}>{h.text}</span>
-                                        </a>
-                                    );
-                                })}
-                            </nav>
-                        )}
+
+                        <div className="max-h-[70vh] overflow-y-auto pr-1">
+                            {headings.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    Tidak ada struktur heading.
+                                </p>
+                            ) : (
+                                <nav className="text-sm space-y-2">
+                                    {headings.map((h) => {
+                                        const indentClass = clsx({
+                                            "pl-0": h.level === 1,
+                                            "pl-3": h.level === 2,
+                                            "pl-6": h.level === 3,
+                                            "pl-9": h.level >= 4,
+                                        });
+                                        return (
+                                            <a
+                                                key={h.id}
+                                                href={`#${h.id}`}
+                                                className={`${indentClass} block hover:text-primary transition text-muted-foreground`}
+                                            >
+                                                <span
+                                                    className={`text-foreground ${h.level === 1 ? "font-medium" : "text-sm"
+                                                        }`}
+                                                >
+                                                    {h.text}
+                                                </span>
+                                            </a>
+                                        );
+                                    })}
+                                </nav>
+                            )}
+                        </div>
 
                         {/* small share + read time */}
                         <div className="mt-4 pt-4 border-t">
-                            <p className="text-xs text-muted-foreground">{article.readingTime ? `${article.readingTime} menit baca` : "Estimasi waktu belum tersedia"}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {article.readingTime
+                                    ? `${article.readingTime} menit baca`
+                                    : "Estimasi waktu belum tersedia"}
+                            </p>
                             <div className="mt-2">
-                                <ShareButton title={article.title} text={article.excerpt || article.content.substring(0, 120)} />
+                                <ShareButton
+                                    title={article.title}
+                                    text={article.excerpt || article.content.substring(0, 120)}
+                                />
                             </div>
                         </div>
                     </div>

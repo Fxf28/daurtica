@@ -1,8 +1,9 @@
 // app/sitemap.ts
+import { getBaseUrl } from "@/lib/api-utils";
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://daurtica.vercel.app";
+  const baseUrl = getBaseUrl();
 
   return [
     {

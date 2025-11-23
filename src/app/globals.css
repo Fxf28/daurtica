@@ -195,3 +195,25 @@
 .recycle-spin {
   animation: recycle-spin 1s linear infinite;
 }
+
+/* di globals.css */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Pastikan tidak ada overflow hidden yang mengganggu */
+body {
+  overflow-x: hidden;
+}
+
+/* Enhance sticky behavior */
+.sticky {
+  position: sticky;
+  will-change: transform;
+}
+
+/* Pastikan main content tidak memiliki margin/padding atas yang mengganggu */
+main {
+  padding-top: 0;
+  margin-top: 0;
+}

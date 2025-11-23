@@ -57,7 +57,7 @@ const sitemapData = [
         links: [
             { name: "Kebijakan Privasi", href: "/privacy", description: "Kebijakan privasi data" },
             { name: "Syarat & Ketentuan", href: "/terms", description: "Syarat penggunaan layanan" },
-            { name: "Peta Situs", href: "/sitemap", description: "Struktur lengkap website" },
+            { name: "Peta Situs", href: "/sitemap.xml", description: "Struktur lengkap website" },
         ]
     }
 ]

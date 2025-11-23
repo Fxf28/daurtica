@@ -186,7 +186,7 @@ export function Footer() {
                             Syarat & Ketentuan
                         </Link>
                         <Separator orientation="vertical" className="h-4" />
-                        <Link href="/sitemap" className="text-xs hover:text-foreground transition-colors">
+                        <Link href="/sitemap-ui" className="text-xs hover:text-foreground transition-colors">
                             Sitemap
                         </Link>
                     </div>

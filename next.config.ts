@@ -18,5 +18,10 @@ const nextConfig: NextConfig = {
     ],
     formats: ["image/webp", "image/avif"],
   },
+  allowedDevOrigins: [
+    "local-origin.dev", // specific hostname
+    "*.local-origin.dev", // wildcard for subdomains
+    "192.168.1.9", // a local network IP address
+  ],
 };
 export default nextConfig;

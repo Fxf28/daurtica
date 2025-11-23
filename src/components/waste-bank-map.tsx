@@ -102,13 +102,13 @@ export default function WasteBankMap({
         <div className="w-full relative" style={{ height }}>
             {/* Location Status */}
             {locationLoading && (
-                <div className="absolute top-4 left-4 z-[1000] bg-white p-3 rounded-lg shadow-lg border">
+                <div className="absolute top-4 left-4 z-[50] bg-white p-3 rounded-lg shadow-lg border">
                     <p className="text-sm font-medium">Mendeteksi lokasi...</p>
                 </div>
             )}
 
             {locationError && (
-                <div className="absolute top-4 left-4 z-[1000] bg-yellow-50 border border-yellow-200 p-3 rounded-lg shadow-lg">
+                <div className="absolute top-4 left-4 z-[50] bg-yellow-50 border border-yellow-200 p-3 rounded-lg shadow-lg">
                     <p className="text-sm text-yellow-800 font-medium mb-1">Tidak dapat mengakses lokasi</p>
                     <p className="text-xs text-yellow-600 mb-2">{locationError}</p>
                     <button

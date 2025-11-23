@@ -1,14 +1,15 @@
+// src/app/(public)/layout.tsx
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     return (
-        <>
-            <header className="w-full flex justify-end items-center p-4 gap-4 h-16">
-                <Navbar />
-            </header>
-            {children}
+        <div className="min-h-screen flex flex-col">
+            <Navbar />
+            <main className="flex-1 pt-16"> {/* Tambahkan pt-16 untuk memberi ruang navbar */}
+                {children}
+            </main>
             <Footer />
-        </>
+        </div>
     );
 }
