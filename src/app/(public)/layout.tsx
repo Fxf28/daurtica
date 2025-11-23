@@ -6,7 +6,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar />
-            <main className="flex-1 pt-16"> {/* Tambahkan pt-16 untuk memberi ruang navbar */}
+            <main className="flex-1 pt-4 md:pt-8 sm:pt-16">
                 {children}
             </main>
             <Footer />

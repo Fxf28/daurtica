@@ -68,7 +68,7 @@ export default function MapPage() {
         <div className="container mx-auto py-8 px-4">
             {/* Header */}
             <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold mb-4 text-green-800">Peta Bank Sampah</h1>
+                <h1 className="text-4xl font-bold mb-4">Peta Bank Sampah</h1>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                     Temukan bank sampah terdekat di sekitar lokasi Anda.
                     Dukung lingkungan dengan mendaur ulang sampah dengan benar.
