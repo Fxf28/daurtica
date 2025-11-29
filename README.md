@@ -1,7 +1,7 @@
 # ♻️ Daurtica: AI-Powered Waste Classification
 
 ![Project Status](https://img.shields.io/badge/Status-Development-orange)
-![Framework](https://img.shields.io/badge/Next.js-14-black)
+![Framework](https://img.shields.io/badge/Next.js-15-black)
 ![ML Model](https://img.shields.io/badge/Model-TensorFlow.js%20%7C%20YOLOv8-blue)
 
 **Daurtica** adalah aplikasi web cerdas yang dirancang untuk membantu klasifikasi sampah secara otomatis menggunakan _Deep Learning_. Sistem ini dapat mengenali dan memilah sampah ke dalam tiga kategori utama: **Organik**, **Anorganik**, dan **B3 (Bahan Berbahaya & Beracun)**.
