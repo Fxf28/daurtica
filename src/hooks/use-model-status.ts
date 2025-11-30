@@ -1,15 +1,31 @@
-// hooks/use-model-status.ts
 import { useState, useEffect } from "react";
-import { loadModel } from "@/lib/classifier-browser";
+import { loadModel, getModelStatus } from "@/lib/classifier-browser";
 
 export function useModelStatus() {
-  const [modelStatus, setModelStatus] = useState<"loading" | "ready" | "error">("loading");
+  // 🚀 OPTIMASI: Cek status awal secara langsung!
+  // Jika getModelStatus() == 'ready', React akan render UI siap LANGSUNG (tanpa flash loading)
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(() => {
+    return getModelStatus() === "ready" ? "ready" : "loading";
+  });
 
   useEffect(() => {
-    loadModel()
-      .then(() => setModelStatus("ready"))
-      .catch(() => setModelStatus("error"));
-  }, []);
+    // Jika sudah ready di awal, tidak perlu load lagi
+    if (status === "ready") return;
 
-  return modelStatus;
+    let mounted = true;
+
+    loadModel()
+      .then(() => {
+        if (mounted) setStatus("ready");
+      })
+      .catch(() => {
+        if (mounted) setStatus("error");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [status]);
+
+  return status;
 }

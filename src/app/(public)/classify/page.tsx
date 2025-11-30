@@ -4,85 +4,79 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UploadImage } from "@/components/upload-image";
 import { CameraCapture } from "@/components/camera-capture";
-import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { FramerLazyConfig, M } from "@/components/framer-wrapper";
+import { Upload, Camera as CameraIcon } from "lucide-react";
 
 export default function ClassifyPage() {
-    const [tabKey, setTabKey] = useState(0);
-
-    const handleReset = () => {
-        try {
-            setTabKey((prev) => prev + 1);
-            toast.success("Berhasil mereset klasifikasi");
-        } catch (err) {
-            console.error(err);
-            toast.error("Gagal mereset, silakan coba lagi");
-        }
-    };
-
+    // Kita gunakan key untuk memaksa re-mount komponen saat tab berubah
+    // Ini memastikan kamera mati saat pindah ke tab upload (hemat baterai/resource)
+    const [activeTab, setActiveTab] = useState("upload");
 
     return (
-        <div className="flex flex-col min-h-screen">
-            <main className="flex-1 flex flex-col items-center justify-center px-6 sm:px-12 md:px-20 py-12">
-                <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Klasifikasi Sampah</h1>
-                <p className="my-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-                    Mulai klasifikasi sekarang. Pilih upload gambar atau ambil gambar secara <i>real-time</i> dengan Camera. <b>Login dahulu jika ingin menyimpan riwayat klasifikasi.</b>
-                </p>
+        <FramerLazyConfig>
+            <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-muted/20">
+                <main className="flex-1 flex flex-col items-center px-4 sm:px-6 md:px-8 py-8 md:py-12 max-w-5xl mx-auto w-full">
 
-                <Tabs defaultValue="upload" className="w-full max-w-2xl">
-                    <TabsList className="grid w-full grid-cols-2 mb-6">
-                        <TabsTrigger value="upload">Upload</TabsTrigger>
-                        <TabsTrigger value="camera">Kamera</TabsTrigger>
-                    </TabsList>
+                    <M.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="text-center mb-8 md:mb-12 space-y-3"
+                    >
+                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
+                            Klasifikasi Sampah AI
+                        </h1>
+                        <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
+                            Deteksi jenis sampah secara instan menggunakan AI.
+                            <span className="hidden sm:inline"> Pilih metode upload gambar atau gunakan kamera langsung.</span>
+                        </p>
+                    </M.div>
 
-                    <TabsContent value="upload">
-                        <UploadImage key={`upload-${tabKey}`} />
-                    </TabsContent>
+                    <Tabs
+                        defaultValue="upload"
+                        value={activeTab}
+                        onValueChange={setActiveTab}
+                        className="w-full max-w-3xl"
+                    >
+                        <TabsList className="grid w-full grid-cols-2 mb-8 p-1 h-12 bg-muted/50 backdrop-blur-sm">
+                            <TabsTrigger value="upload" className="text-base gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                <Upload className="h-4 w-4" />
+                                <span className="hidden sm:inline">Upload Gambar</span>
+                                <span className="sm:hidden">Upload</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="camera" className="text-base gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                <CameraIcon className="h-4 w-4" />
+                                Kamera
+                            </TabsTrigger>
+                        </TabsList>
 
-                    <TabsContent value="camera">
-                        <CameraCapture key={`camera-${tabKey}`} />
-                    </TabsContent>
-                </Tabs>
+                        <div className="mt-2 min-h-[400px]">
+                            <TabsContent value="upload" className="mt-0 focus-visible:outline-none">
+                                <M.div
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <UploadImage />
+                                </M.div>
+                            </TabsContent>
 
-                {/* Global Reset dengan konfirmasi */}
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="mt-6 flex items-center gap-2">
-                            <RotateCcw className="w-4 h-4" />
-                            Reset
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Konfirmasi Reset</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Apakah Anda yakin ingin mereset semua hasil klasifikasi? Aksi ini
-                                akan menghapus gambar dan hasil yang sudah ditampilkan.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleReset}>
-                                Ya, Reset
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </main>
-
-
-        </div>
+                            <TabsContent value="camera" className="mt-0 focus-visible:outline-none">
+                                <M.div
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {/* Mount kamera hanya saat tab aktif agar tidak berat */}
+                                    {activeTab === "camera" && <CameraCapture />}
+                                </M.div>
+                            </TabsContent>
+                        </div>
+                    </Tabs>
+                </main>
+            </div>
+        </FramerLazyConfig>
     );
 }

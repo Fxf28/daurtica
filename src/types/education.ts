@@ -5,14 +5,14 @@ export interface EducationPublic {
   id: string;
   title: string;
   slug: string;
-  content: string;
+  content?: string;
   thumbnailUrl?: string | null;
   cloudinaryPublicId?: string | null; // ✅ TAMBAHKAN INI
   authorId: string;
   createdAt: Date | string;
-  updatedAt: Date | string;
+  updatedAt?: Date | string;
   tags: string[];
-  isPublished: boolean;
+  isPublished?: boolean;
   excerpt?: string | null;
   readingTime?: number | null;
 }

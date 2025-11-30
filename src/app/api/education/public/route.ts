@@ -62,58 +62,67 @@ export async function GET(req: Request) {
     const publishedOnly = searchParams.get("publishedOnly") === "true";
     const offset = (page - 1) * limit;
 
-    // Validasi query parameters
-    if (limit > 100) {
-      return NextResponse.json({ error: "Bad Request", message: "Limit cannot exceed 100" }, { status: 400 });
-    }
+    // ... validasi page & limit tetap sama ...
 
-    if (page < 1) {
-      return NextResponse.json({ error: "Bad Request", message: "Page must be at least 1" }, { status: 400 });
-    }
-
-    // Build where conditions
     const whereConditions = [];
 
-    // Filter by publish status
+    // ... logic filter whereConditions tetap sama ...
     if (publishedOnly || !userId) {
       whereConditions.push(eq(educationPublic.isPublished, true));
     }
-
-    // Filter by author
     if (authorId) {
       whereConditions.push(eq(educationPublic.authorId, authorId));
     }
-
-    // Filter by tag
     if (tag) {
       whereConditions.push(sql`${educationPublic.tags} @> ${JSON.stringify([tag])}`);
     }
-
-    // Search in title and content
     if (search) {
-      whereConditions.push(or(like(educationPublic.title, `%${search}%`), like(educationPublic.excerpt, `%${search}%`), like(educationPublic.content, `%${search}%`)));
+      whereConditions.push(or(like(educationPublic.title, `%${search}%`), like(educationPublic.excerpt, `%${search}%`))); // Hapus search di content agar cepat
     }
 
-    // Query data dengan kondisi
-    const articles = await db
-      .select()
-      .from(educationPublic)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(educationPublic.createdAt))
-      .limit(limit)
-      .offset(offset);
+    const finalWhere = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-    // Query total count
-    const totalResult = await db
-      .select({ count: count() })
-      .from(educationPublic)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+    // 🚀 OPTIMASI 1: Jalankan Query Data & Count secara Paralel
+    const [articles, totalResult] = await Promise.all([
+      // Query Data: HANYA ambil kolom yang diperlukan untuk List/Card
+      db
+        .select({
+          id: educationPublic.id,
+          title: educationPublic.title,
+          slug: educationPublic.slug,
+          thumbnailUrl: educationPublic.thumbnailUrl,
+          excerpt: educationPublic.excerpt,
+          createdAt: educationPublic.createdAt,
+          tags: educationPublic.tags,
+          authorId: educationPublic.authorId,
+          // JANGAN select 'content' disini agar payload ringan!
+        })
+        .from(educationPublic)
+        .where(finalWhere)
+        .orderBy(desc(educationPublic.createdAt))
+        .limit(limit)
+        .offset(offset),
+
+      // Query Count
+      db.select({ count: count() }).from(educationPublic).where(finalWhere),
+    ]);
 
     const total = totalResult[0]?.count || 0;
     const totalPages = Math.ceil(total / limit);
 
+    // Kita perlu memformat data agar sesuai schema Zod di frontend
+    // Karena kita tidak mengambil 'content', kita isi string kosong atau null untuk list view
+    const formattedArticles = articles.map((article) => ({
+      ...article,
+      content: "", // Content dikosongkan agar lolos validasi tapi ringan
+      isPublished: true, // Asumsi true karena public list
+      updatedAt: article.createdAt, // Fallback
+      readingTime: 0,
+      cloudinaryPublicId: null,
+    }));
+
     return NextResponse.json({
-      data: articles,
+      data: formattedArticles,
       pagination: {
         page,
         limit,

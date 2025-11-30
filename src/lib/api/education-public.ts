@@ -7,16 +7,16 @@ export const EducationPublicResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
   slug: z.string(),
-  content: z.string(),
+  content: z.string().optional().or(z.literal("")), // ✅ Boleh kosong untuk List View
   thumbnailUrl: z.string().nullable(),
-  cloudinaryPublicId: z.string().nullable().optional(), // ✅ Jadikan optional
+  cloudinaryPublicId: z.string().nullable().optional(),
   authorId: z.string(),
-  createdAt: z.string().or(z.date()), // ✅ Terima string atau date
-  updatedAt: z.string().or(z.date()), // ✅ Terima string atau date
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()).optional(), // ✅ Optional
   tags: z.array(z.string()).default([]),
-  isPublished: z.boolean(),
+  isPublished: z.boolean().optional(), // ✅ Optional
   excerpt: z.string().nullable(),
-  readingTime: z.number().nullable(),
+  readingTime: z.number().nullable().optional(), // ✅ Optional
 });
 
 export const EducationPublicListResponseSchema = z.object({

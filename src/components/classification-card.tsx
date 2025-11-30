@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 // import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { M } from "./framer-wrapper";
 import { useUser } from "@clerk/nextjs";
 // import { toast } from "sonner";
 
@@ -63,7 +63,7 @@ export const ClassificationCard: React.FC<Props> = ({ results }) => {
 
             <CardContent className="space-y-3">
                 {results.map((r, i) => (
-                    <motion.div
+                    <M.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.25, delay: i * 0.1 }}
@@ -84,7 +84,7 @@ export const ClassificationCard: React.FC<Props> = ({ results }) => {
                                 : "[&>div]:bg-muted-foreground"
                                 }`}
                         />
-                    </motion.div>
+                    </M.div>
                 ))}
             </CardContent>
 

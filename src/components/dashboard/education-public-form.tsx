@@ -1,4 +1,3 @@
-// src/components/dashboard/education-public-form.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -23,6 +22,8 @@ interface EducationPublicFormProps {
 
 export function EducationPublicForm({ article, onSuccess, onCancel }: EducationPublicFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  // State awal form
   const [formData, setFormData] = useState<EducationPublicFormData>({
     title: "",
     content: "",
@@ -31,6 +32,7 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
     tags: [],
     isPublished: false,
   });
+
   const [newTag, setNewTag] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
@@ -42,11 +44,13 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
     if (article) {
       setFormData({
         title: article.title,
-        content: article.content,
+        // ✅ PERBAIKAN: Berikan fallback string kosong agar tidak undefined
+        content: article.content || "",
         thumbnailUrl: article.thumbnailUrl || "",
         excerpt: article.excerpt || "",
         tags: article.tags || [],
-        isPublished: article.isPublished,
+        // ✅ PERBAIKAN: Berikan fallback false jika undefined
+        isPublished: article.isPublished ?? false,
       });
 
       // Set thumbnail preview if article has thumbnail
@@ -111,7 +115,7 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
         tags: formData.tags,
         excerpt: formData.excerpt,
         isPublished: formData.isPublished,
-        // Jangan kirim thumbnailUrl jika tidak ada perubahan
+        // Kirim thumbnailFile jika ada user upload gambar baru
         ...(thumbnailFile && { thumbnailFile }),
       };
 
@@ -267,7 +271,7 @@ export function EducationPublicForm({ article, onSuccess, onCancel }: EducationP
               <Input
                 id="thumbnailUrl"
                 type="url"
-                value={formData.thumbnailUrl}
+                value={formData.thumbnailUrl || ""}
                 onChange={(e) => setFormData(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
                 placeholder="https://example.com/image.jpg"
               />

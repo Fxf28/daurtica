@@ -27,12 +27,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             };
         }
 
+        // PERBAIKAN: Gunakan optional chaining (?.) atau fallback string kosong
+        const contentPreview = article.content ? article.content.substring(0, 160) : "";
+        const description = article.excerpt || contentPreview || "Artikel edukasi pengelolaan sampah Daurtica";
+
         return {
             title: `${article.title} - Edukasi Sampah`,
-            description: article.excerpt || article.content.substring(0, 160),
+            description: description,
             openGraph: {
                 title: article.title,
-                description: article.excerpt || article.content.substring(0, 160),
+                description: description,
                 images: article.thumbnailUrl ? [article.thumbnailUrl] : [],
                 type: "article",
                 publishedTime: article.createdAt.toString(),
@@ -371,7 +375,7 @@ export default async function EducationArticlePage({ params }: Props) {
                         <div className="flex items-center justify-between gap-4">
                             <p className="text-sm text-muted-foreground">Dibagikan untuk edukasi publik</p>
                             <div>
-                                <ShareButton title={article.title} text={article.excerpt || article.content.substring(0, 120)} />
+                                <ShareButton title={article.title} text={article.excerpt || (article.content || "").substring(0, 120)} />
                             </div>
                         </div>
                     </header>
@@ -466,10 +470,7 @@ export default async function EducationArticlePage({ params }: Props) {
                                     : "Estimasi waktu belum tersedia"}
                             </p>
                             <div className="mt-2">
-                                <ShareButton
-                                    title={article.title}
-                                    text={article.excerpt || article.content.substring(0, 120)}
-                                />
+                                <ShareButton title={article.title} text={article.excerpt || (article.content || "").substring(0, 120)} />
                             </div>
                         </div>
                     </div>

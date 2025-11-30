@@ -248,3 +248,22 @@ img {
   height: 100%;
   object-fit: cover;
 }
+
+/* 🚀 PERFORMANCE UTILITIES */
+
+/* Mengurangi beban render pada list panjang (seperti grid artikel) */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 400px; /* Estimasi tinggi card */
+}
+
+/* Mempercepat rendering teks judul */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* GPU Acceleration untuk animasi transform */
+.gpu-layer {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
