@@ -11,23 +11,27 @@ interface GeminiJSONResponse {
   }>;
 }
 
+export interface QuickTipResponse {
+  title: string;
+  category: "Organik" | "Anorganik" | "B3" | "Residu";
+  action: "Kompos" | "Daur Ulang" | "Bank Sampah" | "Buang di TPA" | "Khusus (B3)";
+  tips: string[];
+  funFact: string;
+}
+
 // Fungsi untuk membersihkan dan memvalidasi JSON
-function sanitizeAndParseJSON(jsonString: string): GeminiJSONResponse {
+function sanitizeAndParseJSON<T>(jsonString: string): T {
   try {
-    // Hapus karakter kontrol yang tidak valid
     const cleaned = jsonString
-      .replace(/[\x00-\x1F\x7F]/g, "") // Hapus karakter kontrol
-      .replace(/\n/g, " ") // Ganti newline dengan spasi
-      .replace(/\t/g, " ") // Ganti tab dengan spasi
+      .replace(/[\x00-\x1F\x7F]/g, "")
+      .replace(/\n/g, " ")
+      .replace(/\t/g, " ")
       .trim();
 
-    // Coba parse JSON
-    const parsed = JSON.parse(cleaned) as GeminiJSONResponse;
+    const parsed = JSON.parse(cleaned) as T;
 
-    // Validasi struktur dasar
-    if (typeof parsed.title !== "string" || typeof parsed.content !== "string" || !Array.isArray(parsed.sections)) {
-      throw new Error("Invalid JSON structure");
-    }
+    // HAPUS validasi spesifik di sini karena struktur JSON kini bisa beragam.
+    // Validasi akan dilakukan oleh pemanggil fungsi jika perlu.
 
     return parsed;
   } catch (error) {
@@ -37,21 +41,16 @@ function sanitizeAndParseJSON(jsonString: string): GeminiJSONResponse {
 }
 
 // Fungsi untuk mengekstrak JSON dari teks
-function extractJSONFromText(text: string): GeminiJSONResponse {
-  // Beberapa pattern untuk mengekstrak JSON
-  const jsonPatterns = [
-    /\{[\s\S]*\}/, // Pattern original
-    /```json\n([\s\S]*?)\n```/, // Code block JSON
-    /```\n([\s\S]*?)\n```/, // Code block umum
-    /\{[\s\S]*\}/, // Pattern tanpa flag 's', menggunakan [\s\S] sebagai pengganti
-  ];
+function extractJSONFromText<T>(text: string): T {
+  const jsonPatterns = [/\{[\s\S]*\}/, /```json\n([\s\S]*?)\n```/, /```\n([\s\S]*?)\n```/];
 
   for (const pattern of jsonPatterns) {
     const match = text.match(pattern);
     if (match) {
       try {
-        const jsonString = match[1] || match[0]; // Ambil group 1 atau seluruh match
-        return sanitizeAndParseJSON(jsonString);
+        const jsonString = match[1] || match[0];
+        // Pass tipe generic T ke fungsi sanitasi
+        return sanitizeAndParseJSON<T>(jsonString);
       } catch (parseError) {
         console.warn(`${parseError}: Pattern ${pattern.toString()} failed, trying next...`);
         continue;
@@ -123,7 +122,11 @@ Ensure the content is:
       const text = response.text();
 
       try {
-        const jsonData = extractJSONFromText(text);
+        const jsonData = extractJSONFromText<GeminiJSONResponse>(text);
+
+        if (!jsonData.content || !Array.isArray(jsonData.sections)) {
+          throw new Error("Invalid structure for Education Content");
+        }
         // Convert to expected response type
         return {
           title: jsonData.title,
@@ -206,4 +209,73 @@ function createFallbackContent(prompt: string, tags: string[]): GeminiEducationR
       },
     ],
   };
+}
+
+// ==========================================
+// UPDATE: QUICK TIPS (POPUP) - ADJUSTED FOR LABELS
+// ==========================================
+
+export async function generateQuickTips(rawLabel: string): Promise<QuickTipResponse> {
+  // 1. Bersihkan label dari snake_case (contoh: "light_bulbs_tubes" -> "light bulbs tubes")
+  const cleanLabel = rawLabel.replace(/_/g, " ").toLowerCase();
+
+  if (!process.env.GOOGLE_API_KEY) {
+    return {
+      title: cleanLabel,
+      category: "Anorganik",
+      action: "Daur Ulang",
+      tips: ["Bersihkan sampah", "Pisahkan dari jenis lain", "Setorkan ke pengepul"],
+      funFact: "Data simulasi (API Key tidak ditemukan).",
+    };
+  }
+
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash-lite",
+    generationConfig: { temperature: 0.3 }, // Lebih rendah agar lebih strict soal kategori
+  });
+
+  // Prompt khusus yang memetakan label bahasa Inggris Anda ke Konteks Indonesia
+  const prompt = `
+    Bertindaklah sebagai ahli pengelolaan sampah di Indonesia.
+    Berikan saran pengelolaan singkat untuk jenis sampah: "${cleanLabel}".
+
+    PANDUAN KATEGORI BERDASARKAN INPUT:
+    - "cardboard", "paper" -> Anorganik (Kardus/Kertas)
+    - "glass", "metal", "plastic" -> Anorganik (Daur Ulang)
+    - "food organics", "vegetation" -> Organik (Kompos)
+    - "textile trash" -> Anorganik/Residu
+    - "batteries", "light bulbs tubes", "mercury thermometers", "pesticide containers", "ointment" -> B3 (Bahan Berbahaya & Beracun)
+    - "miscellaneous trash" -> Residu
+
+    TUGAS:
+    Outputkan JSON valid (tanpa markdown) dengan struktur berikut:
+    {
+      "title": "Terjemahan nama sampah ke Bahasa Indonesia yang umum (contoh: light bulbs -> Lampu Bohlam)",
+      "category": "Pilih satu: Organik / Anorganik / B3 / Residu",
+      "action": "Pilih satu: Kompos / Daur Ulang / Bank Sampah / Buang di TPA / Khusus (B3)",
+      "tips": ["3 langkah singkat, padat, praktis cara mengelolanya (cuci/pilah/aman)"],
+      "funFact": "1 fakta unik edukatif tentang sampah ini (maks 1 kalimat)"
+    }
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+
+    // Panggil dengan tipe QuickTipResponse agar TypeScript mengenali propertinya
+    const json = extractJSONFromText<QuickTipResponse>(text);
+
+    // Sekarang TypeScript tidak akan error lagi di sini:
+    return {
+      title: json.title || cleanLabel,
+      category: json.category || "Anorganik",
+      action: json.action || "Daur Ulang",
+      tips: Array.isArray(json.tips) ? json.tips : ["Kelola dengan bijak"],
+      funFact: json.funFact || "",
+    };
+  } catch (error) {
+    console.error("Error generating quick tips:", error);
+    throw new Error("Gagal memuat saran AI");
+  }
 }
