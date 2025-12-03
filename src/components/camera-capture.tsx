@@ -333,7 +333,7 @@ export const CameraCapture = () => {
                                 variant="secondary"
                                 size="sm"
                                 onClick={retake}
-                                className="absolute top-4 right-4 z-20 shadow-lg bg-black/90 hover:bg-black"
+                                className="absolute top-4 right-4 z-20 shadow-lg bg-black/90 hover:bg-black text-white"
                             >
                                 <RefreshCw className="h-4 w-4 mr-2" />
                                 Foto Ulang
