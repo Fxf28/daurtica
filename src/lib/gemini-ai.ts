@@ -73,7 +73,7 @@ export async function generateEducationContent(promptData: GeminiEducationPrompt
   try {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash-lite",
       generationConfig: {
         maxOutputTokens: 2000, // Batasi output untuk mengurangi load
         temperature: 0.7,
@@ -231,7 +231,7 @@ export async function generateQuickTips(rawLabel: string): Promise<QuickTipRespo
 
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-2.5-flash-lite",
     generationConfig: { temperature: 0.3 }, // Lebih rendah agar lebih strict soal kategori
   });
 
