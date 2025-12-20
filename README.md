@@ -50,7 +50,7 @@ Pastikan Anda sudah menginstal:
 Clone repositori dan install dependencies:
 
 ```bash
-git clone [https://github.com/Fxf28/daurtica.git](https://github.com/Fxf28/daurtica.git)
+git clone https://github.com/Fxf28/daurtica.git
 cd daurtica
 npm install
 ```
