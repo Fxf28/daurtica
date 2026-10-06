@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { FramerLazyConfig, M } from "@/components/framer-wrapper"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -53,16 +53,24 @@ export default function EducationPage() {
         }
     }, [searchQuery, isOnline, articles.length])
 
+    // Selalu panggil versi terbaru dari loadArticles tanpa memicu ulang efek
+    // saat `articles` berubah (mencegah fetch duplikat setelah data masuk).
+    const loadArticlesRef = useRef(loadArticles)
     useEffect(() => {
-        loadArticles()
+        loadArticlesRef.current = loadArticles
     }, [loadArticles])
 
+    // Muat artikel: langsung saat mount, debounce 500 ms saat query pencarian
+    // atau status koneksi berubah. Satu request per perubahan.
+    const isFirstLoad = useRef(true)
     useEffect(() => {
+        const delay = isFirstLoad.current ? 0 : 500
+        isFirstLoad.current = false
         const timeoutId = setTimeout(() => {
-            loadArticles()
-        }, 500)
+            void loadArticlesRef.current()
+        }, delay)
         return () => clearTimeout(timeoutId)
-    }, [searchQuery, loadArticles])
+    }, [searchQuery, isOnline])
 
     const formatDate = (dateInput: Date | string) => {
         const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput

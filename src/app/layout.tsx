@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClientProvider } from "./query-client-provider";
 import ProgressLoader from '@/components/progress-loader';
+import { PwaUpdateBanner } from "@/components/pwa-update-banner";
 
 // 1. OPTIMASI FONT: Tambahkan display: 'swap'
 const geistSans = Geist({
@@ -95,7 +96,6 @@ export const metadata: Metadata = {
       { url: '/apple-touch-icon.png' }
     ]
   },
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -152,27 +152,28 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider afterSignOutUrl="/">
-      <html lang="id" suppressHydrationWarning>
-        <head>
-          {/* 2. BERSIHKAN HEAD: Hapus manual link font dan favicon */}
-          {/* next/font sudah otomatis handle font loading */}
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        {/* 2. BERSIHKAN HEAD: Hapus manual link font dan favicon */}
+        {/* next/font sudah otomatis handle font loading */}
 
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-          />
-        </head>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
+        <ClerkProvider afterSignOutUrl="/">
           <QueryClientProvider>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
               <ProgressLoader />
               {children}
+              <PwaUpdateBanner />
               <Toaster richColors position="top-right" />
             </ThemeProvider>
           </QueryClientProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

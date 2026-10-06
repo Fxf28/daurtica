@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,3 +43,11 @@ next-env.d.ts
 
 # custom
 used_files.txt
+
+# pwa (generated at build time by @ducanh2912/next-pwa)
+public/sw.js
+public/workbox-*.js
+public/fallback-*.js
+
+# lockfiles (Bun is the canonical package manager)
+package-lock.json

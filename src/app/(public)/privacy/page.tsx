@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { FramerLazyConfig, M } from "@/components/framer-wrapper"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, Eye, Database, Users, Lock } from "lucide-react"
 
@@ -87,22 +87,23 @@ const itemVariants = {
 
 export default function PrivacyPage() {
     return (
+        <FramerLazyConfig>
         <div className="min-h-screen bg-gradient-to-b from-blue-50 to-background dark:from-blue-950/20 dark:to-background">
             <div className="container mx-auto px-4 py-12 max-w-4xl">
                 {/* Header */}
-                <motion.div
+                <M.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                     className="text-center mb-12"
                 >
-                    <motion.div
+                    <M.div
                         className="flex justify-center mb-4"
                         whileHover={{ scale: 1.1 }}
                         transition={{ type: "spring", stiffness: 300 }}
                     >
                         <Shield className="h-12 w-12 text-primary" />
-                    </motion.div>
+                    </M.div>
                     <h1 className="text-4xl font-bold text-foreground mb-4">
                         Kebijakan Privasi
                     </h1>
@@ -113,16 +114,16 @@ export default function PrivacyPage() {
                             day: 'numeric'
                         })}
                     </p>
-                </motion.div>
+                </M.div>
 
-                <motion.div
+                <M.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                     className="space-y-8"
                 >
                     {privacyData.map((section, index) => (
-                        <motion.div
+                        <M.div
                             key={index}
                             variants={itemVariants}
                         >
@@ -160,11 +161,11 @@ export default function PrivacyPage() {
                                     )}
                                 </CardContent>
                             </Card>
-                        </motion.div>
+                        </M.div>
                     ))}
 
                     {/* Contact */}
-                    <motion.div
+                    <M.div
                         variants={itemVariants}
                     >
                         <Card>
@@ -182,9 +183,10 @@ export default function PrivacyPage() {
                                 </p>
                             </CardContent>
                         </Card>
-                    </motion.div>
-                </motion.div>
+                    </M.div>
+                </M.div>
             </div>
         </div>
+        </FramerLazyConfig>
     )
 }

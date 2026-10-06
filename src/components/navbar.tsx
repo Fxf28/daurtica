@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { AnimatePresence, useReducedMotion } from "framer-motion";
+import { FramerLazyConfig, M } from "@/components/framer-wrapper";
 import { Menu, X } from "lucide-react";
 import {
   NavigationMenu,
@@ -13,9 +14,9 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { ModeToggle } from "./mode-toggle";
+import { PwaInstallButton } from "./pwa-install-button";
 import {
-  SignedIn,
-  SignedOut,
+  Show,
   SignInButton,
   SignUpButton,
   UserButton,
@@ -25,6 +26,7 @@ import {
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { toast } from "sonner";
 
 type NavItem = {
@@ -51,6 +53,9 @@ export function Navbar(): React.JSX.Element {
   // Menggunakan isLoaded dari useUser untuk handling loading state
   const { user, isLoaded } = useUser();
   const shouldReduceMotion = useReducedMotion();
+
+  // State install PWA dipanggil sekali di sini (presentasional via PwaInstallButton).
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   // Handle scroll effect
   React.useEffect(() => {
@@ -86,6 +91,12 @@ export function Navbar(): React.JSX.Element {
   };
 
   const handleClose = React.useCallback(() => setOpen(false), []);
+
+  const handleInstallClick = React.useCallback(() => {
+    // Tutup menu mobile dulu supaya prompt browser tampil tanpa overlay menu.
+    setOpen(false);
+    void promptInstall();
+  }, [promptInstall]);
 
   const handleDashboardClick = (e: React.MouseEvent, requiresAuth?: boolean) => {
     // Cek apakah data user sudah terload (isLoaded) sebelum cek status user
@@ -124,13 +135,13 @@ export function Navbar(): React.JSX.Element {
     );
   };
 
-  // Render item menu untuk mobile menggunakan motion.li
+  // Render item menu untuk mobile menggunakan M.li
   const renderMobileNavItem = (item: NavItem) => {
     const isActive = pathname === item.href;
     const isLocked = item.requiresAuth && isLoaded && !user;
 
     return (
-      <motion.li key={item.href} variants={mobileItemVariants} className="list-none">
+      <M.li key={item.href} variants={mobileItemVariants} className="list-none">
         {isLocked ? (
           <button
             onClick={(e) => handleDashboardClick(e, true)}
@@ -148,14 +159,14 @@ export function Navbar(): React.JSX.Element {
             {item.name}
           </Link>
         )}
-      </motion.li>
+      </M.li>
     );
   };
 
   const navClass = `w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 sticky top-0 z-[1000] transition-all duration-200 ${isScrolled ? 'shadow-sm bg-background/95' : ''}`;
 
   return (
-    <>
+    <FramerLazyConfig>
       {/* Main Navbar */}
       <nav className={navClass}>
         <div className="flex items-center justify-between px-4 py-3 md:px-8 max-w-7xl mx-auto">
@@ -182,6 +193,7 @@ export function Navbar(): React.JSX.Element {
 
           {/* Desktop Right Section */}
           <div className="hidden md:flex items-center gap-3 min-w-[140px] justify-end">
+            {canInstall && <PwaInstallButton onInstall={handleInstallClick} />}
             <ModeToggle />
 
             {/* Loading State: Mencegah tombol geser saat auth loading */}
@@ -193,17 +205,17 @@ export function Navbar(): React.JSX.Element {
 
             {/* Loaded State */}
             <ClerkLoaded>
-              <SignedOut>
+              <Show when="signed-out">
                 <SignInButton mode="modal">
                   <Button className="transition-all duration-200 hover:shadow-sm" size="sm">Sign In</Button>
                 </SignInButton>
                 <SignUpButton mode="modal">
                   <Button variant="outline" className="transition-all duration-200 hover:shadow-sm" size="sm">Sign Up</Button>
                 </SignUpButton>
-              </SignedOut>
-              <SignedIn>
+              </Show>
+              <Show when="signed-in">
                 <UserButton />
-              </SignedIn>
+              </Show>
             </ClerkLoaded>
           </div>
 
@@ -227,7 +239,7 @@ export function Navbar(): React.JSX.Element {
         {open && (
           <>
             {/* Backdrop */}
-            <motion.div
+            <M.div
               initial={{ opacity: shouldReduceMotion ? 1 : 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: shouldReduceMotion ? 1 : 0 }}
@@ -238,7 +250,7 @@ export function Navbar(): React.JSX.Element {
             />
 
             {/* Sidebar */}
-            <motion.aside
+            <M.aside
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -264,7 +276,7 @@ export function Navbar(): React.JSX.Element {
 
               {/* Navigation Items */}
               <nav className="flex-1 flex flex-col">
-                <motion.ul
+                <M.ul
                   initial="hidden"
                   animate="show"
                   exit="hidden"
@@ -272,12 +284,22 @@ export function Navbar(): React.JSX.Element {
                   className="flex flex-col gap-2"
                 >
                   {navItems.map(renderMobileNavItem)}
-                </motion.ul>
+
+                  {/* Install CTA (muncul hanya saat prompt tersedia & belum dismissed) */}
+                  {canInstall && (
+                    <M.li variants={mobileItemVariants} className="list-none">
+                      <PwaInstallButton
+                        variant="menu"
+                        onInstall={handleInstallClick}
+                      />
+                    </M.li>
+                  )}
+                </M.ul>
 
                 {/* Auth Section Mobile */}
                 <div className="mt-auto border-t pt-6 flex flex-col gap-3">
                   <ClerkLoaded>
-                    <SignedOut>
+                    <Show when="signed-out">
                       <SignInButton mode="modal">
                         <Button
                           onClick={handleClose}
@@ -297,20 +319,20 @@ export function Navbar(): React.JSX.Element {
                           Sign Up
                         </Button>
                       </SignUpButton>
-                    </SignedOut>
-                    <SignedIn>
+                    </Show>
+                    <Show when="signed-in">
                       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <span className="text-sm font-medium">Akun Saya</span>
                         <UserButton />
                       </div>
-                    </SignedIn>
+                    </Show>
                   </ClerkLoaded>
                 </div>
               </nav>
-            </motion.aside>
+            </M.aside>
           </>
         )}
       </AnimatePresence>
-    </>
+    </FramerLazyConfig>
   );
 }

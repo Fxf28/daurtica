@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { FramerLazyConfig, M } from "@/components/framer-wrapper"
 import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -60,10 +60,11 @@ const itemVariants = {
 
 export default function FAQPage() {
     return (
+        <FramerLazyConfig>
         <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 dark:to-background">
             <div className="container mx-auto px-4 py-12 max-w-4xl">
                 {/* Header */}
-                <motion.div
+                <M.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
@@ -75,17 +76,17 @@ export default function FAQPage() {
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Temukan jawaban untuk pertanyaan yang sering diajukan tentang Daurtica dan fitur-fiturnya.
                     </p>
-                </motion.div>
+                </M.div>
 
                 {/* FAQ List */}
-                <motion.div
+                <M.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                     className="space-y-4"
                 >
                     {faqData.map((item, index) => (
-                        <motion.div
+                        <M.div
                             key={index}
                             variants={itemVariants}
                             className="bg-card rounded-lg shadow-sm border border-border overflow-hidden hover:shadow-md transition-shadow"
@@ -103,12 +104,12 @@ export default function FAQPage() {
                                     </p>
                                 </div>
                             </details>
-                        </motion.div>
+                        </M.div>
                     ))}
-                </motion.div>
+                </M.div>
 
                 {/* Contact Support */}
-                <motion.div
+                <M.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.6 }}
@@ -136,8 +137,9 @@ export default function FAQPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </motion.div>
+                </M.div>
             </div>
         </div>
+        </FramerLazyConfig>
     )
 }

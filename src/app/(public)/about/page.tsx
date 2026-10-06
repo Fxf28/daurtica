@@ -1,14 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { FramerLazyConfig, M } from "@/components/framer-wrapper";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function AboutPage() {
     return (
+        <FramerLazyConfig>
         <div className="flex flex-col min-h-screen">
             <main className="flex-1 container mx-auto px-6 sm:px-12 md:px-20 py-16">
-                <motion.div
+                <M.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
@@ -23,10 +24,10 @@ export default function AboutPage() {
                         cerdas. Kami percaya bahwa teknologi dapat mendorong perubahan nyata untuk
                         lingkungan yang lebih berkelanjutan.
                     </p>
-                </motion.div>
+                </M.div>
 
                 <div className="grid gap-8 md:grid-cols-2">
-                    <motion.div
+                    <M.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
@@ -41,9 +42,9 @@ export default function AboutPage() {
                                 </p>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    </M.div>
 
-                    <motion.div
+                    <M.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
@@ -58,10 +59,10 @@ export default function AboutPage() {
                                 </p>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    </M.div>
                 </div>
 
-                <motion.div
+                <M.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
@@ -78,8 +79,9 @@ export default function AboutPage() {
                         Bersama Daurtica, mari wujudkan Indonesia yang lebih bersih, sehat, dan
                         sadar lingkungan.
                     </p>
-                </motion.div>
+                </M.div>
             </main>
         </div>
+        </FramerLazyConfig>
     );
 }

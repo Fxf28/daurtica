@@ -2,7 +2,7 @@
 
 "use client"
 
-import { motion } from "framer-motion"
+import { FramerLazyConfig, M } from "./framer-wrapper"
 import Image from "next/image"
 import { useState } from "react"
 import { Users, Star } from "lucide-react"
@@ -19,12 +19,13 @@ export const HeroVisual = () => {
     const [isLoaded, setIsLoaded] = useState(false)
 
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative"
-        >
+        <FramerLazyConfig>
+            <M.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="relative"
+            >
             <div className="relative z-10">
                 {/* Priority True = Wajib untuk LCP (Loading Cepat) */}
                 <Image
@@ -54,12 +55,13 @@ export const HeroVisual = () => {
                     />
                 </>
             )}
-        </motion.div>
+            </M.div>
+        </FramerLazyConfig>
     )
 }
 
 const FloatingElement = ({ className, icon, text, delay = 0 }: FloatingElementProps) => (
-    <motion.div
+    <M.div
         animate={{ y: [0, -10, 0] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay }}
         className={`absolute bg-background/80 backdrop-blur-sm border rounded-xl p-3 shadow-sm ${className}`}
@@ -68,5 +70,5 @@ const FloatingElement = ({ className, icon, text, delay = 0 }: FloatingElementPr
             {icon}
             <span className="text-sm font-medium text-foreground">{text}</span>
         </div>
-    </motion.div>
+    </M.div>
 )

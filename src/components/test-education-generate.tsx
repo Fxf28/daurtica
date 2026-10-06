@@ -41,11 +41,6 @@ export function TestEducationGenerate({ onGenerateSuccess, onNewArticleCreated }
   const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(true);
 
-  // Load usage info on component mount
-  useEffect(() => {
-    loadUsageInfo();
-  }, []);
-
   const loadUsageInfo = async () => {
     try {
       setLoadingUsage(true);
@@ -59,6 +54,11 @@ export function TestEducationGenerate({ onGenerateSuccess, onNewArticleCreated }
       setLoadingUsage(false);
     }
   };
+
+  // Load usage info on component mount
+  useEffect(() => {
+    loadUsageInfo();
+  }, []);
 
   const handleAddTag = () => {
     if (currentTag.trim() && !tags.includes(currentTag.trim())) {

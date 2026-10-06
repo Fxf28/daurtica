@@ -2,18 +2,17 @@
 
 import { LazyMotion, domAnimation, m } from "framer-motion";
 
-// Gunakan 'domAnimation' untuk fitur standar (fade, slide). 
-// Ini jauh lebih ringan daripada fitur lengkap.
-const loadFeatures = () =>
-    import("framer-motion").then(() => domAnimation);
-
+// Fitur standar (fade, slide) untuk komponen `m`.
+// Catatan performa (Phase 10): fitur diimpor langsung (sinkron) — bukan lagi
+// `import("framer-motion")` yang menarik seluruh index package (~55 KB gzip)
+// ke chunk async di setiap halaman yang memakai LazyMotion.
 export const FramerLazyConfig = ({
     children,
 }: {
     children: React.ReactNode;
 }) => {
     return (
-        <LazyMotion features={loadFeatures} strict>
+        <LazyMotion features={domAnimation} strict>
             {children}
         </LazyMotion>
     );

@@ -43,7 +43,7 @@ Aplikasi web ini dibangun menggunakan **Next.js 14** (App Router). Ikuti langkah
 Pastikan Anda sudah menginstal:
 
 - Node.js (LTS version)
-- npm / yarn / pnpm
+- Bun (https://bun.sh) — package manager yang digunakan proyek ini
 
 ### 2. Installation
 
@@ -52,7 +52,7 @@ Clone repositori dan install dependencies:
 ```bash
 git clone https://github.com/Fxf28/daurtica.git
 cd daurtica
-npm install
+bun install
 ```
 
 ### 3\. Environment Variables (.env)
@@ -79,7 +79,7 @@ VERCEL_URL=your_vercel_deployment_url
 Jalankan development server:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Buka [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) di browser Anda untuk melihat hasilnya.
@@ -130,7 +130,7 @@ src/
 │   ├── ui/                     # Reusable UI Components (Shadcn)
 │   ├── camera-capture.tsx      # Komponen Kamera Web
 │   ├── classification-card.tsx # Tampilan Hasil AI
-│   └── loading-overlay.tsx     # Indikator Loading
+│   └── progress-loader.tsx     # Indikator Loading Navigasi
 │
 ├── db/                         # Database Schema
 │   └── schema.ts

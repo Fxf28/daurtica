@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { FramerLazyConfig, M } from "@/components/framer-wrapper"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -97,10 +97,11 @@ const statsVariants = {
 
 export default function SitemapPage() {
     return (
+        <FramerLazyConfig>
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-background dark:from-gray-950/20 dark:to-background">
             <div className="container mx-auto px-4 py-12 max-w-6xl">
                 {/* Header */}
-                <motion.div
+                <M.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
@@ -112,17 +113,17 @@ export default function SitemapPage() {
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Jelajahi semua halaman dan fitur yang tersedia di Daurtica
                     </p>
-                </motion.div>
+                </M.div>
 
                 {/* Sitemap Grid */}
-                <motion.div
+                <M.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
                     {sitemapData.map((category, categoryIndex) => (
-                        <motion.div
+                        <M.div
                             key={categoryIndex}
                             variants={itemVariants}
                         >
@@ -151,12 +152,12 @@ export default function SitemapPage() {
                                     ))}
                                 </CardContent>
                             </Card>
-                        </motion.div>
+                        </M.div>
                     ))}
-                </motion.div>
+                </M.div>
 
                 {/* Quick Stats */}
-                <motion.div
+                <M.div
                     variants={statsVariants}
                     initial="hidden"
                     animate="visible"
@@ -168,17 +169,18 @@ export default function SitemapPage() {
                         { number: "7", label: "Dashboard Tools" },
                         { number: "3", label: "Dokumen Legal" }
                     ].map((stat, index) => (
-                        <motion.div
+                        <M.div
                             key={index}
                             whileHover={{ scale: 1.05 }}
                             className="bg-card rounded-xl p-6 shadow-sm border border-border"
                         >
                             <div className="text-2xl font-bold text-primary mb-1">{stat.number}</div>
                             <div className="text-sm text-muted-foreground">{stat.label}</div>
-                        </motion.div>
+                        </M.div>
                     ))}
-                </motion.div>
+                </M.div>
             </div>
         </div>
+        </FramerLazyConfig>
     )
 }
